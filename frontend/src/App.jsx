@@ -1,16 +1,14 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.jsx
+import React from "react";
+import AdminSidebar from "./components/layouts/AdminSidebar";
 
-function App() {
+export default function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <h1 className="text-4xl font-bold text-red-600">
-        Tailwind CSS v4 + React + Vite 🔥
-      </h1>
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <div className="flex-1 bg-gray-100 p-6">
+        <p className="text-gray-700">Sidebar Test</p>
+      </div>
     </div>
   );
 }
-
-export default App;
