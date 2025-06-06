@@ -21,7 +21,7 @@ import {
   SidebarMenuButton,
 } from "../ui/sidebar";
 
-// Hardcode the current path for now; we’ll replace this with React Router later.
+// Hardcode the current path for now; we'll replace this with React Router later.
 const currentPath = "/admin/dashboard";
 
 const navItems = [
@@ -36,9 +36,9 @@ const navItems = [
 
 export default function AdminSidebar() {
   return (
-    <Sidebar className="w-64 bg-blue-800 text-white min-h-screen flex flex-col">
+    <Sidebar className="w-64 bg-[#0f4c81] text-white min-h-screen flex flex-col">
       {/* Logo header */}
-      <SidebarHeader className="h-20 flex items-center justify-center p-4">
+      <SidebarHeader className="h-20 flex items-center justify-center p-4 border-b border-white/20">
         <div className="flex items-center gap-2">
           <Compass className="h-8 w-8 text-white" />
           <span className="text-2xl font-bold text-white">SLTOURPAL</span>
@@ -46,25 +46,25 @@ export default function AdminSidebar() {
       </SidebarHeader>
 
       {/* Nav items */}
-      <SidebarContent className="p-2 flex-1 overflow-auto">
+      <SidebarContent className="p-4 flex-1 overflow-auto">
         <SidebarMenu className="space-y-1">
           {navItems.map(({ to, label, icon: Icon }) => {
             const isActive = to === currentPath;
 
             return (
               <SidebarMenuItem key={to}>
-                <SidebarMenuButton asChild className="block">
+                <SidebarMenuButton asChild>
                   <a
                     href={to}
                     className={
-                      "flex items-center gap-2 p-2 rounded-md " +
+                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors " +
                       (isActive
-                        ? "bg-white/20 text-blue-200"
-                        : "hover:bg-blue-700 text-white")
+                        ? "bg-white text-[#0f4c81]"
+                        : "hover:bg-white/10 text-white")
                     }
                   >
-                    <Icon className={"h-5 w-5 " + (isActive ? "text-blue-200" : "text-white")} />
-                    <span>{label}</span>
+                    <Icon className={"h-5 w-5 flex-shrink-0 " + (isActive ? "text-[#0f4c81]" : "text-white")} />
+                    <span className="font-medium">{label}</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -75,19 +75,21 @@ export default function AdminSidebar() {
 
       {/* Profile footer */}
       <SidebarFooter className="p-4 mt-auto">
-        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-300" />
+            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
+            </div>
             <div>
               <p className="text-sm font-semibold text-white">Admin User</p>
-              <p className="text-xs text-blue-200">Administrator</p>
+              <p className="text-xs text-white/70">Administrator</p>
             </div>
           </div>
         </div>
 
         {/* Collapsed avatar button (still hidden) */}
         <div className="hidden mt-2">
-          <SidebarMenuButton asChild className="block">
+          <SidebarMenuButton asChild>
             <a
               href="/admin/profile"
               className="h-8 w-8 rounded-full bg-gray-300 block"
