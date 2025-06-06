@@ -1,24 +1,33 @@
+// src/components/layouts/AdminLayout.jsx
+
 import React from "react";
-import Sidebar from "./AdminSidebar";
-import Header from "./Header";
+import AdminSidebar from "./AdminSidebar";
+import AdminHeader from "./AdminHeader";
 
-export default function AdminLayout({children}){
-    return(
-        <div className="flex min-h-screen">
-            <aside className="w-64 bg-blue-800 text-white">
-                <Sidebar/>
-            </aside>
+/**
+ * AdminLayout
+ * Props:
+ *  - children: ReactNode (the “main content” to render to the right of the sidebar)
+ */
+export default function AdminLayout({ children }) {
+  return (
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Sidebar occupies fixed width on left */}
+      <AdminSidebar />
 
-            <div className="flex flex-1 flex-col bg-gray-100">
-                <header className="sticky top-0 z-10 bg-white shadow-sm">
-                    <Header/>
-                </header>
+      {/* Right‐hand column: header + content */}
+      <div className="flex flex-1 flex-col">
+        {/* Header */}
+        <AdminHeader
+          title="Tour Management"
+          subtitle="Oversee and manage all tour packages."
+        />
 
-                <main className="flex-1 overflow-y-auto p-6">
-                    {children}
-                </main>
-            </div>
-        </div> 
-        
-    );
+        {/* Main content area (scrollable) */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 }
