@@ -41,8 +41,7 @@ export function SidebarFooter({ className = "", children, ...rest }) {
 /** SidebarMenu: reset default list styling */
 export function SidebarMenu({ className = "", children, ...rest }) {
   return (
-    // Add `list-none p-0 m-0` so there’s no bullet, no padding, no margin
-    <ul className={`list-none p-0 m-0 ${className}`} {...rest}>
+    <ul className={`list-none p-0 m-0 gap-4 ${className}`} {...rest}>
       {children}
     </ul>
   );
@@ -51,7 +50,6 @@ export function SidebarMenu({ className = "", children, ...rest }) {
 /** SidebarMenuItem: reset potential li styling as well */
 export function SidebarMenuItem({ className = "", children, ...rest }) {
   return (
-    // Also remove any padding/margin from the <li> itself
     <li className={`list-none p-0 m-0 ${className}`} {...rest}>
       {children}
     </li>
@@ -64,7 +62,15 @@ export function SidebarMenuItem({ className = "", children, ...rest }) {
  */
 export function SidebarMenuButton({ asChild = false, className = "", children, ...rest }) {
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, { className, ...rest });
+    // Merge classNames properly instead of overriding
+    const childClassName = children.props.className || "";
+    const mergedClassName = className ? `${childClassName} ${className}` : childClassName;
+    
+    return React.cloneElement(children, { 
+      ...children.props,  // Preserve child's original props
+      ...rest,            // Apply new props
+      className: mergedClassName  // Merge classNames
+    });
   }
   return (
     <button className={className} {...rest}>

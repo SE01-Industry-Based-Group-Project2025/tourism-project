@@ -3,20 +3,20 @@ import React from "react";
 
 export function Avatar({ className = "", children, ...rest }) {
   return (
-    <div className={`rounded-full overflow-hidden ${className}`} {...rest}>
+    <div className={`relative inline-flex items-center justify-center overflow-hidden rounded-full ${className}`} {...rest}>
       {children}
     </div>
   );
 }
 
 export function AvatarImage({ src, alt, ...rest }) {
-  return <img src={src} alt={alt} className="block w-full h-full object-cover" {...rest} />;
+  return <img src={src} alt={alt} className="h-full w-full object-cover" {...rest} />;
 }
 
-export function AvatarFallback({ children, ...rest }) {
+export function AvatarFallback({ className = "", children, ...rest }) {
   return (
-    <div className="flex items-center justify-center bg-gray-300 w-full h-full" {...rest}>
-      <span>{children}</span>
+    <div className={`flex h-full w-full items-center justify-center bg-gray-300 text-gray-600 font-medium ${className}`} {...rest}>
+      {children}
     </div>
   );
 }

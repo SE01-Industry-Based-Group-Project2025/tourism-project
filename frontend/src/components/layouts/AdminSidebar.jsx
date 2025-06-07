@@ -11,9 +11,16 @@ import {
   BarChart3,
   MapPin,
 } from "lucide-react";
-
-// Hardcode the current path for now; we'll replace this with React Router later.
-const currentPath = "/admin/dashboard";
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "../ui/sidebar";
+import {NavLink, useLocation} from "react-router-dom"; // Import NavLink and useLocation for routing
 
 const navItems = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -26,47 +33,67 @@ const navItems = [
 ];
 
 export default function AdminSidebar() {
+  const location = useLocation();
+  
   return (
-    <div className="w-64 bg-[#0f4c81] text-white min-h-screen flex flex-col">
+    <Sidebar className="w-64 bg-gradient-to-b from-[#0f4c81] via-[#1e5f99] to-[#0f4c81] text-white min-h-screen flex flex-col shadow-2xl border-r border-white/10">
       {/* Logo header */}
-      <div className="h-20 flex items-center justify-center p-4 border-b border-white/20">
-        <div className="flex items-center gap-2">
-          <Compass className="h-8 w-8 text-white" />
-          <span className="text-2xl font-bold text-white">SLTOURPAL</span>
+      <SidebarHeader className="h-24 flex items-center justify-center p-6 border-b border-white/20 bg-white/5 backdrop-blur-sm">
+        <div className="flex items-center gap-3 group">
+          <div className="relative">
+            <Compass className="h-10 w-10 text-white drop-shadow-lg group-hover:rotate-12 transition-transform duration-300" />
+            <div className="absolute -inset-1 bg-white/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold text-white tracking-wide drop-shadow-sm">SLTOURPAL</span>
+            <span className="text-xs text-white/70 font-medium">Tourism Admin</span>
+          </div>
         </div>
-      </div>
-
-      {/* Nav items */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
+      </SidebarHeader>      {/* Nav items */}
+      <SidebarContent className="px-3 py-6 flex-1 overflow-hidden">
+        <SidebarMenu className="space-y-2">
           {navItems.map(({ to, label, icon: Icon }) => {
-            const isActive = to === currentPath;
+            const isActive = location.pathname === to;
 
             return (
-              <li key={to}>
-                <a
-                  href={to}
-                  className={`
-                    flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
-                    ${isActive 
-                      ? "bg-white text-[#0f4c81] font-semibold" 
-                      : "hover:bg-white/10 text-white"
+              <SidebarMenuItem key={to}>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to={to}
+                    className={
+                      "group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 relative overflow-hidden " +
+                      (isActive
+                        ? "bg-white text-[#0f4c81] shadow-lg shadow-white/20 scale-[1.02]"
+                        : "hover:bg-white/15 text-white hover:scale-[1.01] hover:shadow-md hover:shadow-white/10")
                     }
-                  `}
-                >
-                  <Icon 
-                    className={`h-5 w-5 ${isActive ? "text-[#0f4c81]" : "text-white"}`} 
-                  />
-                  <span>{label}</span>
-                </a>
-              </li>
+                  >
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
+                      isActive 
+                        ? "bg-[#0f4c81]/10" 
+                        : "bg-white/10 group-hover:bg-white/20"
+                    }`}>
+                      <Icon className={`h-5 w-5 flex-shrink-0 transition-all duration-300 ${
+                        isActive 
+                          ? "text-[#0f4c81]" 
+                          : "text-white group-hover:scale-110"
+                      }`} />
+                    </div>
+                    <span className={`font-medium text-sm transition-all duration-300 ${
+                      isActive ? "text-[#0f4c81]" : "text-white"
+                    }`}>
+                      {label}
+                    </span>
+                    {isActive && (
+                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#0f4c81] rounded-l-full"></div>
+                    )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             );
           })}
-        </ul>
-      </nav>
-
-      {/* Profile footer */}
-      <div className="p-4 border-t border-white/20">
+        </SidebarMenu>
+      </SidebarContent>      {/* Profile footer */}
+      <SidebarFooter className="p-4 mt-auto">
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -78,7 +105,17 @@ export default function AdminSidebar() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* Collapsed avatar button (still hidden) */}
+        <div className="hidden mt-2">
+          <SidebarMenuButton asChild>
+            <a
+              href="/admin/profile"
+              className="h-8 w-8 rounded-full bg-gray-300 block"
+            />
+          </SidebarMenuButton>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
