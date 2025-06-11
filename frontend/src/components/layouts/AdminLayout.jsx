@@ -9,7 +9,7 @@ import { Outlet } from "react-router-dom";
  * Props:
  *  - children: ReactNode (the “main content” to render to the right of the sidebar)
  */
-export default function AdminLayout({ children }) {
+export default function AdminLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar occupies fixed width on left */}

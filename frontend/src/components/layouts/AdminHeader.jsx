@@ -1,7 +1,7 @@
 // src/components/layouts/AdminHeader.jsx
 import React from "react";
 import { Bell, ChevronDown, User, Settings, LogOut } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/Avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,8 +9,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
-} from "../ui/dropdown-menu";
-import { Button } from "../ui/button";
+} from "../ui/Dropdown-menu";
+import { Button } from "../ui/Button";
 
 /**
  * AdminHeader:
