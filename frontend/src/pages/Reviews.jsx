@@ -46,9 +46,9 @@ export default function Reviews() {
       </svg>
     ));
   };
-
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="space-y-8 p-6">
       {/* Header */}
       <PageHeader
         title="Reviews Management"
@@ -63,13 +63,13 @@ export default function Reviews() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <StatsCard
           title="Total Reviews"
           value="1,432"
           color="purple"
-          trend="up"
-          trendValue="+156 this month"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -80,8 +80,8 @@ export default function Reviews() {
           title="Average Rating"
           value="4.7"
           color="yellow"
-          trend="up"
-          trendValue="+0.2"
+
+
           icon={({ className }) => (
             <svg className={className} fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -92,8 +92,8 @@ export default function Reviews() {
           title="5-Star Reviews"
           value="892"
           color="green"
-          trend="up"
-          trendValue="+89 this month"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -104,8 +104,8 @@ export default function Reviews() {
           title="Pending Reviews"
           value="23"
           color="red"
-          trend="down"
-          trendValue="-5"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -191,11 +191,11 @@ export default function Reviews() {
         </div>
 
         <div className="mt-6 text-center">
-          <button className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
-            Load More Reviews
+          <button className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">            Load More Reviews
           </button>
         </div>
       </ContentCard>
+      </div>
     </div>
   );
 }

@@ -10,28 +10,24 @@ export default function Users() {
     { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "Guide", status: "Active", lastActive: "3 hours ago" },
     { id: 4, name: "Sarah Wilson", email: "sarah@example.com", role: "Customer", status: "Inactive", lastActive: "1 week ago" },
   ]);
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <PageHeader
-        title="Users Management"
-        subtitle="Manage users, guides, and administrators"
-        icon={({ className }) => (
-          <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197v0z" />
-          </svg>
-        )}
-      />
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="space-y-8 p-6">
+        {/* Header */}
+        <PageHeader
+          title="Users Management"
+          subtitle="Manage users, guides, and administrators"
+          icon={({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197v0z" />
+            </svg>
+          )}
+        />        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <StatsCard
           title="Total Users"
           value="1,248"
           color="blue"
-          trend="up"
-          trendValue="+12%"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -42,8 +38,6 @@ export default function Users() {
           title="Active Users"
           value="982"
           color="green"
-          trend="up"
-          trendValue="+8%"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -54,8 +48,6 @@ export default function Users() {
           title="Tour Guides"
           value="24"
           color="purple"
-          trend="up"
-          trendValue="+2"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -67,8 +59,6 @@ export default function Users() {
           title="New This Month"
           value="156"
           color="yellow"
-          trend="up"
-          trendValue="+23%"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -136,20 +126,19 @@ export default function Users() {
                     }`}>
                       {user.status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  </td>                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.lastActive}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center justify-center gap-3">
+                      <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg hover:from-blue-100 hover:to-blue-200 transition-all duration-300 shadow-sm hover:shadow-md">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit
                       </button>
-                      <button className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-gradient-to-r from-red-50 to-red-100 rounded-lg hover:from-red-100 hover:to-red-200 transition-all duration-300 shadow-sm hover:shadow-md">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                         Delete
@@ -162,6 +151,7 @@ export default function Users() {
           </table>
         </div>
       </ContentCard>
+      </div>
     </div>
   );
 }

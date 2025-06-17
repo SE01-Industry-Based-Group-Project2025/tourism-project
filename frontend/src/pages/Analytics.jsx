@@ -12,9 +12,9 @@ export default function Analytics() {
     { month: 'May', bookings: 55, revenue: 15200 },
     { month: 'Jun', bookings: 67, revenue: 18900 },
   ];
-
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="space-y-8 p-6">
       {/* Header */}
       <PageHeader
         title="Analytics Dashboard"
@@ -29,13 +29,13 @@ export default function Analytics() {
       />
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <StatsCard
           title="Monthly Revenue"
           value="$45,632"
           color="indigo"
-          trend="up"
-          trendValue="+12.5%"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -46,8 +46,8 @@ export default function Analytics() {
           title="Total Bookings"
           value="328"
           color="blue"
-          trend="up"
-          trendValue="+8.2%"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v1a2 2 0 002 2h2m0-4v4m0-4a2 2 0 012-2h2a2 2 0 012 2v1a2 2 0 01-2 2h-2m0-4v4" />
@@ -58,8 +58,8 @@ export default function Analytics() {
           title="Conversion Rate"
           value="24.3%"
           color="green"
-          trend="up"
-          trendValue="+2.1%"
+
+
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -70,8 +70,8 @@ export default function Analytics() {
           title="Customer Satisfaction"
           value="4.8/5"
           color="yellow"
-          trend="up"
-          trendValue="+0.3"
+
+
           icon={({ className }) => (
             <svg className={className} fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -226,12 +226,12 @@ export default function Analytics() {
                 <span className="text-gray-600">Customer Satisfaction</span>
                 <span className="font-medium">4.8 / 5.0</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '96%' }}></div>
+              <div className="w-full bg-gray-200 rounded-full h-2">                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '96%' }}></div>
               </div>
             </div>
           </div>
         </ContentCard>
+      </div>
       </div>
     </div>
   );
