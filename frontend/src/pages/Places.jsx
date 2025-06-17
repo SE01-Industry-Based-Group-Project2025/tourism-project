@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import PageHeader from '../components/ui/PageHeader';
+import StatsCard from '../components/ui/StatsCard';
+import ContentCard from '../components/ui/ContentCard';
 import Tabs from '../components/ui/Tabs';
 import RegionFilter from '../components/ui/RegionFilter';
 import SearchBar from '../components/ui/SearchBar';
@@ -102,50 +105,127 @@ const Places = () => {
 
     setShowModal(false);
     setEditData(null);
-  };
+  };  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <PageHeader
+        title="Places Management"
+        subtitle="Manage destinations and activities across Sri Lanka"
+        icon={({ className }) => (
+          <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        )}
+      />
 
-  return (
-    <div>
-      
-
-      <h2 className="text-3xl font-semibold mb-4 px-6 mt-4">
-        {activeTab === 'Destinations' ? 'Place Management' : 'Activity Management'}
-      </h2>
-      <Tabs activeTab={activeTab} onChange={setActiveTab} />
-
-      <div className="flex items-center gap-4 mb-6 px-6">
-        <RegionFilter
-          selectedRegion={selectedRegion}
-          onChange={setSelectedRegion}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Destinations"
+          value={destinations.length.toString()}
+          color="blue"
+          trend="up"
+          trendValue="+3 this month"
+          icon={({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          )}
         />
-        <div className="flex-1">
-          <SearchBar searchTerm={searchTerm} onChange={setSearchTerm} />
+        <StatsCard
+          title="Total Activities"
+          value={activities.length.toString()}
+          color="green"
+          trend="up"
+          trendValue="+2 this month"
+          icon={({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          )}
+        />
+        <StatsCard
+          title="Popular Regions"
+          value="5"
+          color="purple"
+          trend="stable"
+          trendValue="No change"
+          icon={({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          )}
+        />
+        <StatsCard
+          title="Recent Updates"
+          value="12"
+          color="yellow"
+          trend="up"
+          trendValue="+8 this week"
+          icon={({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+        />
+      </div>
+
+      {/* Tabs */}
+      <ContentCard noPadding>
+        <div className="p-6">
+          <Tabs activeTab={activeTab} onChange={setActiveTab} />
         </div>
-        <NewDestinationButton
-          onClick={() => {
-            setEditType(activeTab === 'Destinations' ? 'destination' : 'activity');
-            setShowModal(true);
-          }}
-        >
-          {activeTab === 'Destinations' ? '+ New Destination' : '+ New Activity'}
-        </NewDestinationButton>
-      </div>
+      </ContentCard>
 
-      <div className="px-6">
-        <PlacesTable
-          data={paginatedData}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+      {/* Controls */}
+      <ContentCard>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Search & Filter</h3>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <RegionFilter
+            selectedRegion={selectedRegion}
+            onChange={setSelectedRegion}
+          />
+          <div className="flex-1 w-full sm:w-auto">
+            <SearchBar searchTerm={searchTerm} onChange={setSearchTerm} />
+          </div>
+          <NewDestinationButton
+            onClick={() => {
+              setEditType(activeTab === 'Destinations' ? 'destination' : 'activity');
+              setShowModal(true);
+            }}
+          >
+            {activeTab === 'Destinations' ? '+ New Destination' : '+ New Activity'}
+          </NewDestinationButton>
+        </div>
+      </ContentCard>
 
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-        />
-      </div>
+      {/* Table */}
+      <PlacesTable
+        data={paginatedData}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
+      {/* Pagination */}
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+        onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+      />
+
+      {/* Modals */}
       <DestinationFormModal
         isOpen={showModal}
         onClose={() => {
@@ -154,6 +234,7 @@ const Places = () => {
         }}
         onSubmit={handleAddOrUpdate}
         initialData={editData}
+        type={editType}
       />
 
       <DeleteConfirmModal
@@ -161,6 +242,7 @@ const Places = () => {
         item={deleteTarget}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}
+        type={deleteType}
       />
     </div>
   );
