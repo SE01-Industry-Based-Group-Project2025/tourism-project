@@ -128,9 +128,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       return { success: false, error: 'Network error' };
     }
-  };
-
-  // 4) Logout: hit endpoint, then clear and redirect
+  };  // 4) Logout: hit endpoint, then clear and redirect with maximum security
   const logout = async () => {
     try {
       if (token) {
@@ -140,11 +138,53 @@ export const AuthProvider = ({ children }) => {
         });
       }
     } catch {
-      // ignore
+      // ignore server errors during logout
     } finally {
+      // Clear all authentication data
       clearAuthData();
-      // Force navigation to login and prevent back navigation
-      window.location.href = '/login';
+      
+      // Security: Clear all possible storage locations
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear IndexedDB if available
+      if ('indexedDB' in window) {
+        try {
+          const dbs = await indexedDB.databases();
+          dbs.forEach(db => indexedDB.deleteDatabase(db.name));
+        } catch (e) {
+          // ignore errors
+        }
+      }
+      
+      // Security: Clear browser cache and all caches
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+      
+      // Clear service worker registration if any
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => registration.unregister());
+        });
+      }
+      
+      // Clear navigation history completely
+      const numEntries = window.history.length;
+      for (let i = 0; i < numEntries - 1; i++) {
+        window.history.back();
+      }
+      window.history.replaceState(null, '', '/login');
+      
+      // Broadcast logout to other tabs
+      const channel = new BroadcastChannel('auth_channel');
+      channel.postMessage({ type: 'FORCE_LOGOUT' });
+      channel.close();
+      
+      // Force complete page reload to ensure all state is cleared
+      window.location.replace('/login');
     }
   };
 
