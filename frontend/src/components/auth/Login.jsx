@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
@@ -8,9 +8,27 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login, user, isAdmin, isAuthenticated } = useAuth();
+  const navigate = useNavigate();  // Handle navigation after successful login
+  useEffect(() => {
+    if (loginSuccess && isAuthenticated && user) {
+      if (isAdmin) {
+        console.log('Detected admin, navigating to /admin/dashboard');
+        navigate('/admin/dashboard');
+      } else {
+        // For non-admin users, redirect to login with a message
+        // Since there's no regular user dashboard currently
+        console.log('Regular user logged in, but no dashboard available');
+        setErrors({ general: 'Access granted, but no dashboard is available for your user type.' });
+        setLoading(false);
+        return;
+      }
+      setLoginSuccess(false); // Reset flag
+      setLoading(false); // Stop loading spinner
+    }
+  }, [loginSuccess, isAuthenticated, user, isAdmin, navigate]);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -31,34 +49,38 @@ export default function Login() {
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  };
-
-  const handleSubmit = async e => {
+  };  const handleSubmit = async e => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
+    setErrors({}); // Clear previous errors
+    
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // Redirect based on roles array
-      const roles = result.user.roles || [];
-      if (roles.includes('ROLE_ADMIN')) navigate('/admin/dashboard');
-      else navigate('/dashboard');
+      setLoginSuccess(true); // Trigger navigation via useEffect
+      
+      // Fallback: If auth state doesn't update within 3 seconds, stop loading
+      setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          setErrors({ general: 'Login succeeded but navigation failed. Please refresh the page.' });
+        }
+      }, 3000);
     } else {
       setErrors({ general: result.error || 'Login failed' });
+      setLoading(false);
     }
-    setLoading(false);
   };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/50">
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 rounded-full">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl shadow-lg">
               {/* Lock Icon */}
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 
                          00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7
@@ -66,13 +88,20 @@ export default function Login() {
               </svg>
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to your SLTOURPAL account</p>
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">Welcome Back</h2>
+          <p className="mt-3 text-sm text-gray-600 font-medium">Sign in to your SLTOURPAL account</p>
         </div>
 
         {errors.general && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-800">{errors.general}</p>
+          <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-red-200 rounded-lg">
+                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm text-red-800 font-medium">{errors.general}</p>
+            </div>
           </div>
         )}
 

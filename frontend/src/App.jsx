@@ -23,7 +23,7 @@ export default function App() {
     <Routes>
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      
 
       {/* Redirect root to login (or to admin/dashboard if you prefer) */}
       <Route path="/" element={<Navigate to="/login" replace />} />

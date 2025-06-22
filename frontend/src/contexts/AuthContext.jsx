@@ -1,103 +1,140 @@
+// src/contexts/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]     = useState(null);
+  const [token, setToken]   = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
 
-  const API_BASE_URL = 'http://localhost:8080/api/auth';
+  const API = 'http://localhost:8080/api/auth';
 
-  // On mount, validate existing token
+  // Security: Check token expiration
+  const isTokenExpired = (token) => {
+    if (!token) return true;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
+  };
+
+  // Security: Clear all auth data
+  const clearAuthData = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    // Also clear any other sensitive data
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+  };
+
+  // 1) On mount, if token exists, verify it to get full user DTO
   useEffect(() => {
-    const checkAuth = async () => {
-      const savedToken = localStorage.getItem('token');
-      if (savedToken) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/verify`, {
-            headers: {
-              'Authorization': `Bearer ${savedToken}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          if (res.ok) {
-            const userData = await res.json();
-            setUser({ ...userData, roles: userData.roles || [] });
-            setToken(savedToken);
-          } else {
-            localStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
-          }
-        } catch {
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
+    (async () => {
+      if (token) {
+        // Check if token is expired before making API call
+        if (isTokenExpired(token)) {
+          clearAuthData();
+        } else {
+          await fetchAndSetUser(token);
         }
       }
       setLoading(false);
-    };
-    checkAuth();
-  }, []);
+    })();
+  }, [token]); // Include token in dependency array for security
 
-  // Login
+  // Security: Auto-logout on token expiration
+  useEffect(() => {
+    if (token && !loading) {
+      const checkTokenExpiration = () => {
+        if (isTokenExpired(token)) {
+          logout();
+        }
+      };
+
+      // Check every minute
+      const interval = setInterval(checkTokenExpiration, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [token, loading]);
+  // Helper: fetch /verify, set user or clear on failure
+  const fetchAndSetUser = async (jwt) => {
+    try {
+      const res = await fetch(`${API}/verify`, {
+        headers: { 
+          Authorization: `Bearer ${jwt}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!res.ok) throw new Error('Invalid token');
+      const dto = await res.json();
+      // dto: { id, email, firstName, lastName, phone, enabled, roles: [...] }
+      setUser(dto);
+      setToken(jwt);
+      localStorage.setItem('token', jwt);
+      return true;
+    } catch {
+      clearAuthData();
+      return false;
+    }
+  };
+
+  // 2) Login: POST /login, then verify
   const login = async (email, password) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
+      const res = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        setToken(data.token);
-        setUser({ ...data.user, roles: data.user.roles || [] });
-        return { success: true, user: data.user };
-      } else {
-        return { success: false, error: data || 'Login failed' };
+      if (!res.ok) {
+        // data may be {message} or plain text
+        return { success: false, error: data.message || data || 'Login failed' };
       }
+      // data.token should exist
+      const ok = await fetchAndSetUser(data.token);
+      // Get the updated user state after fetchAndSetUser completes
+      return ok ? { success: true } : { success: false, error: 'Token verification failed' };
     } catch {
       return { success: false, error: 'Network error' };
     }
   };
 
-  // Register
+  // 3) Register: POST /register, then verify
   const register = async (userData) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/register`, {
+      const res = await fetch(`${API}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
       const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        setToken(data.token);
-        setUser({ ...data.user, roles: data.user.roles || [] });
-        return { success: true, user: data.user };
-      } else {
-        return { success: false, error: data || 'Registration failed' };
+      if (!res.ok) {
+        return { success: false, error: data.message || data || 'Registration failed' };
       }
+      const ok = await fetchAndSetUser(data.token);
+      return ok ? { success: true } : { success: false, error: 'Token verification failed' };
     } catch {
       return { success: false, error: 'Network error' };
     }
   };
 
-  // Logout
+  // 4) Logout: hit endpoint, then clear and redirect
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${API_BASE_URL}/logout`, {
+        await fetch(`${API}/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -105,32 +142,31 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // ignore
     } finally {
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
+      clearAuthData();
+      // Force navigation to login and prevent back navigation
+      window.location.href = '/login';
     }
   };
 
-  // Headers for protected calls
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   });
 
-  // Helper
-  const isAdmin = !!user?.roles?.includes('ROLE_ADMIN');
+  const isAuthenticated = !!user;
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
   return (
     <AuthContext.Provider value={{
       user,
       token,
       loading,
+      isAuthenticated,
+      isAdmin,
       login,
       register,
       logout,
-      getAuthHeaders,
-      isAuthenticated: !!user,
-      isAdmin,
+      getAuthHeaders
     }}>
       {children}
     </AuthContext.Provider>

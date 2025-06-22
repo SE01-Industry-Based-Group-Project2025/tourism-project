@@ -23,16 +23,15 @@ const Tabs = ({ activeTab, onChange }) => {
       )
     }
   ];
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-1 flex">
+    <div className="bg-gray-50/80 rounded-xl p-1.5 flex backdrop-blur-sm">
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-md font-medium transition-all duration-200 ${
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-medium transition-all duration-200 ${
             activeTab === tab.id
-              ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
-              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+              ? 'bg-white text-blue-600 shadow-lg shadow-blue-500/20 transform scale-[1.02] border border-blue-100'
+              : 'text-gray-600 hover:text-blue-600 hover:bg-white/60'
           }`}
           onClick={() => onChange(tab.id)}
         >

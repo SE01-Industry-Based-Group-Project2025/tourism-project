@@ -1,6 +1,7 @@
 // src/components/layouts/AdminHeader.jsx
 import React from "react";
 import { Bell, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/Avatar";
 import {
   DropdownMenu,
@@ -19,9 +20,24 @@ import { Button } from "../ui/Button";
  *  - subtitle: string (e.g. "Oversee and manage all tour packages.")
  */
 export default function AdminHeader({ title = "Dashboard", subtitle = "Welcome to SLTOURPAL Admin" }) {
-  const handleLogout = () => {
-    // Add your logout logic here
-    console.log("Logging out...");
+  const { user, logout } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force logout even if server call fails
+      window.location.href = '/login';
+    }
+  };
+
+  // Get user's initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user) return "AU";
+    const firstName = user.firstName || "";
+    const lastName = user.lastName || "";
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "AU";
   };
 
   return (
@@ -78,32 +94,39 @@ export default function AdminHeader({ title = "Dashboard", subtitle = "Welcome t
               <Button
                 variant="ghost"
                 className="flex items-center gap-2 p-1 h-auto hover:bg-gray-100 rounded-lg"
-              >
-                {/* Avatar Circle */}
+              >                {/* Avatar Circle */}
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxVc2VyfGVufDB8fHx8MTc0OTEwNjMzOHww&ixlib=rb-4.1.0&q=80&w=1080"
-                    alt="Admin User Avatar"
+                    src={user?.profileImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxVc2VyfGVufDB8fHx8MTc0OTEwNjMzOHww&ixlib=rb-4.1.0&q=80&w=1080"}
+                    alt={`${user?.firstName || 'Admin'} ${user?.lastName || 'User'} Avatar`}
                   />
-                  <AvatarFallback>AU</AvatarFallback>
+                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
 
                 {/* Name + Role */}
                 <div className="text-left hidden md:block">
-                  <p className="text-sm font-medium text-gray-800">Admin User</p>
-                  <p className="text-xs text-gray-600">Administrator</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : 'Admin User'}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {user?.roles?.includes('ROLE_ADMIN') ? 'Administrator' : 'User'}
+                  </p>
                 </div>
 
                 {/* Chevron Down */}
                 <ChevronDown className="h-4 w-4 text-gray-600 hidden md:block" />
               </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-56">
+            </DropdownMenuTrigger>            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Admin User</p>
-                  <p className="text-xs text-gray-500">admin@sltourpal.com</p>
+                  <p className="text-sm font-medium">
+                    {user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : 'Admin User'}
+                  </p>
+                  <p className="text-xs text-gray-500">{user?.email || 'admin@sltourpal.com'}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
