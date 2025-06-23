@@ -18,12 +18,8 @@ export default function Login() {
         console.log('Detected admin, navigating to /admin/dashboard');
         navigate('/admin/dashboard');
       } else {
-        // For non-admin users, redirect to login with a message
-        // Since there's no regular user dashboard currently
-        console.log('Regular user logged in, but no dashboard available');
-        setErrors({ general: 'Access granted, but no dashboard is available for your user type.' });
-        setLoading(false);
-        return;
+        console.log('Detected regular user, navigating to /dashboard');
+        navigate('/dashboard');
       }
       setLoginSuccess(false); // Reset flag
       setLoading(false); // Stop loading spinner

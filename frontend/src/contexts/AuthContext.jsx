@@ -195,18 +195,20 @@ export const AuthProvider = ({ children }) => {
 
   const isAuthenticated = !!user;
   const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isUser  = user?.roles?.includes('ROLE_USER');
 
   return (
     <AuthContext.Provider value={{
       user,
       token,
       loading,
-      isAuthenticated,
+      isAuthenticated: !!user,
       isAdmin,
+      isUser,
       login,
       register,
       logout,
-      getAuthHeaders
+      getAuthHeaders,
     }}>
       {children}
     </AuthContext.Provider>

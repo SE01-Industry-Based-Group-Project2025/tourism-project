@@ -15,11 +15,13 @@ import Users from "./pages/Users";
 import QuoteRequests from "./pages/QuoteRequests";
 import Reviews from "./pages/Reviews";
 import Analytics from "./pages/Analytics";
+import LandingPage      from "./pages/LandingPage";
 
 // Auth
 import Login from "./components/auth/Login";
-//import Register from "./components/auth/Register";
+import Register from "./components/auth/Register";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import TouristDashboard from './pages/TouristDashboard';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -89,20 +91,29 @@ export default function App() {
     <Routes>
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
-      
+      <Route path="/register" element={<Register />} />
 
-      {/* Redirect root to login (or to admin/dashboard if you prefer) */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Public landing page */}
+       <Route path="/" element={<LandingPage />} />
+
+      {/* Tourist (any logged‐in user) */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <TouristDashboard />
+            </ProtectedRoute>
+          }
+        />
 
       {/* Admin-only routes */}
       <Route
-        path="/admin/*"
-        element={
+        path="/admin/*"        element={
           <ProtectedRoute requiredRole="ROLE_ADMIN">
             <AdminLayout />
           </ProtectedRoute>
-        }
-      >        <Route index element={<Navigate to="dashboard" replace />} />
+        }>
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="tours" element={<Tours />} />
         <Route path="tours/new" element={<AddTour />} />
