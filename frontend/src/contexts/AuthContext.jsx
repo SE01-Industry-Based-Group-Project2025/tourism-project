@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.jsx
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -28,21 +29,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Security: Clear all auth data
+  // Clear auth data without touching caches or history
   const clearAuthData = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    // Also clear any other sensitive data
-    localStorage.removeItem('user');
-    sessionStorage.clear();
   };
 
-  // 1) On mount, if token exists, verify it to get full user DTO
+  const location = useLocation();
+
+  // Check token on mount and whenever token changes
   useEffect(() => {
-    (async () => {
+    const verify = async () => {
       if (token) {
-        // Check if token is expired before making API call
         if (isTokenExpired(token)) {
           clearAuthData();
         } else {
@@ -50,23 +49,16 @@ export const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
-    })();
-  }, [token]); // Include token in dependency array for security
+    };
+    verify();
+  }, [token]);
 
-  // Security: Auto-logout on token expiration
+  // Check for expiration on navigation changes
   useEffect(() => {
-    if (token && !loading) {
-      const checkTokenExpiration = () => {
-        if (isTokenExpired(token)) {
-          logout();
-        }
-      };
-
-      // Check every minute
-      const interval = setInterval(checkTokenExpiration, 60000);
-      return () => clearInterval(interval);
+    if (token && isTokenExpired(token)) {
+      clearAuthData();
     }
-  }, [token, loading]);
+  }, [location.pathname, token]);
   // Helper: fetch /verify, set user or clear on failure
   const fetchAndSetUser = async (jwt) => {
     try {
@@ -128,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       return { success: false, error: 'Network error' };
     }
-  };  // 4) Logout: hit endpoint, then clear and redirect with maximum security
+  };  // 4) Logout: hit endpoint and clear auth state
   const logout = async () => {
     try {
       if (token) {
@@ -140,51 +132,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // ignore server errors during logout
     } finally {
-      // Clear all authentication data
       clearAuthData();
-      
-      // Security: Clear all possible storage locations
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Clear IndexedDB if available
-      if ('indexedDB' in window) {
-        try {
-          const dbs = await indexedDB.databases();
-          dbs.forEach(db => indexedDB.deleteDatabase(db.name));
-        } catch (e) {
-          // ignore errors
-        }
-      }
-      
-      // Security: Clear browser cache and all caches
-      if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-        });
-      }
-      
-      // Clear service worker registration if any
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => registration.unregister());
-        });
-      }
-      
-      // Clear navigation history completely
-      const numEntries = window.history.length;
-      for (let i = 0; i < numEntries - 1; i++) {
-        window.history.back();
-      }
-      window.history.replaceState(null, '', '/login');
-      
-      // Broadcast logout to other tabs
-      const channel = new BroadcastChannel('auth_channel');
-      channel.postMessage({ type: 'FORCE_LOGOUT' });
-      channel.close();
-      
-      // Force complete page reload to ensure all state is cleared
-      window.location.replace('/login');
     }
   };
 
