@@ -9,6 +9,7 @@ import { useSecurityMonitor } from "./hooks/useSecurityMonitor";
 import AdminLayout from "./components/layouts/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Tours from "./pages/Tours";
+import AddTour from "./pages/AddTour";
 import Places from "./pages/Places";
 import Users from "./pages/Users";
 import QuoteRequests from "./pages/QuoteRequests";
@@ -101,10 +102,10 @@ export default function App() {
             <AdminLayout />
           </ProtectedRoute>
         }
-      >
-        <Route index element={<Navigate to="dashboard" replace />} />
+      >        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="tours" element={<Tours />} />
+        <Route path="tours/new" element={<AddTour />} />
         <Route path="places" element={<Places />} />
         <Route path="users" element={<Users />} />
         <Route path="quote-requests" element={<QuoteRequests />} />

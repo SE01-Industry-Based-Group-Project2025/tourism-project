@@ -103,12 +103,10 @@ export default function Login() {
               <p className="text-sm text-red-800 font-medium">{errors.general}</p>
             </div>
           </div>
-        )}
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        )}        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
               <Input
@@ -118,25 +116,24 @@ export default function Login() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
-                className={`w-full ${errors.email ? 'border-red-300 focus:ring-red-500' : ''}`}
+                className={`${errors.email ? 'border-red-300 focus:ring-red-500' : ''}`}
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <Input
-                id="password"
+              <Input                id="password"
                 name="password"
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                className={`w-full ${errors.password ? 'border-red-300 focus:ring-red-500' : ''}`}
+                className={`${errors.password ? 'border-red-300 focus:ring-red-500' : ''}`}
               />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
             </div>
           </div>
 
