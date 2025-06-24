@@ -448,6 +448,10 @@ export default function AddNewTour({ onClose }) {
         headers: getAuthHeaders(),
         body: JSON.stringify(tourData),
       });
+      if (res.status === 403) {
+        alert('You are not authorized to publish tours.');
+        return;
+      }
       if (!res.ok) throw new Error('Failed to publish tour');
       alert('Tour published successfully');
       if (onClose) onClose();
