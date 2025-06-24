@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -80,6 +81,10 @@ export default function AddNewTour({ onClose }) {
   const [modalEndDate, setModalEndDate] = useState('');
   // Media & Summary
   const [uploadedImages, setUploadedImages] = useState([]);
+
+  const { getAuthHeaders } = useAuth();
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const TOURS_API = `${API_BASE}/api/tours`;
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -409,9 +414,47 @@ export default function AddNewTour({ onClose }) {
   };
 
   const handleSetPrimaryImage = (imageId) => {
-    setUploadedImages(prev => 
+    setUploadedImages(prev =>
       prev.map(img => ({ ...img, isPrimary: img.id === imageId }))
     );
+  };
+
+  const handlePublish = async () => {
+    const tourData = {
+      name: tourName,
+      category: tourCategory,
+      duration: { value: durationValue, unit: durationUnit },
+      shortDescription,
+      highlights: highlights.filter(h => h.trim()),
+      difficulty,
+      region,
+      activities: selectedActivities,
+      itineraryDays,
+      accommodations,
+      pricing: {
+        basePrice12,
+        basePrice35,
+        basePrice6Plus,
+        minGroupSize,
+        maxGroupSize,
+      },
+      availabilityRanges,
+      images: uploadedImages.map(img => img.preview),
+    };
+
+    try {
+      const res = await fetch(TOURS_API, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(tourData),
+      });
+      if (!res.ok) throw new Error('Failed to publish tour');
+      alert('Tour published successfully');
+      if (onClose) onClose();
+    } catch (err) {
+      console.error('Publish tour error', err);
+      alert('Error publishing tour');
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -1737,7 +1780,10 @@ export default function AddNewTour({ onClose }) {
                 >
                   Next: {steps[currentStep]?.name}
                 </Button>              ) : (
-                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25">
+                <Button
+                  onClick={handlePublish}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25"
+                >
                   Publish Tour
                 </Button>
               )}</div>
