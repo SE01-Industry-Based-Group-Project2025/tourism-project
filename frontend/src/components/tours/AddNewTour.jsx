@@ -69,11 +69,8 @@ export default function AddNewTour({ onClose }) {
   const [modalAccImages, setModalAccImages] = useState([]);
 
   // Pricing & Availability
-  const [basePrice12, setBasePrice12] = useState('');
-  const [basePrice35, setBasePrice35] = useState('');
-  const [basePrice6Plus, setBasePrice6Plus] = useState('');
-  const [minGroupSize, setMinGroupSize] = useState('2');
-  const [maxGroupSize, setMaxGroupSize] = useState('12');
+  const [pricePerPerson, setPricePerPerson] = useState('');
+  const [availableSpots, setAvailableSpots] = useState('');
   const [availabilityRanges, setAvailabilityRanges] = useState([]);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [currentRangeToEditId, setCurrentRangeToEditId] = useState(null);
@@ -432,11 +429,8 @@ export default function AddNewTour({ onClose }) {
       itineraryDays,
       accommodations,
       pricing: {
-        basePrice12,
-        basePrice35,
-        basePrice6Plus,
-        minGroupSize,
-        maxGroupSize,
+        pricePerPerson,
+        availableSpots,
       },
       availabilityRanges,
       images: uploadedImages.map(img => img.preview),
@@ -489,10 +483,8 @@ export default function AddNewTour({ onClose }) {
         accommodationNames: accommodations.map(acc => acc.title)
       },
       pricing: {
-        smallGroup: basePrice12 ? `$${basePrice12}` : 'Not set',
-        mediumGroup: basePrice35 ? `$${basePrice35}` : 'Not set',
-        largeGroup: basePrice6Plus ? `$${basePrice6Plus}` : 'Not set',
-        groupSize: `${minGroupSize}-${maxGroupSize} people`
+        pricePerPerson: pricePerPerson ? `$${pricePerPerson}` : 'Not set',
+        availableSpots: availableSpots || 'Not set'
       },
       availability: {
         totalPeriods: availabilityRanges.length,
@@ -1213,147 +1205,59 @@ export default function AddNewTour({ onClose }) {
             )}            {/* Step 4: Pricing & Availability */}
             {currentStep === 4 && (
               <div className="space-y-10">
-                <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Pricing & Availability</h2>
-                  <p className="text-gray-600 mt-2">Set pricing tiers, group sizes, and available date ranges</p>
-                </div>
-
-                {/* Pricing Section */}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Pricing Tiers</h3>
-                    <p className="text-sm text-gray-600 mb-6">Set different prices based on group size for better flexibility</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Small Group (1-2 people) */}
-                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg shadow-blue-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Small Group</CardTitle>
-                            <p className="text-sm text-gray-600">1-2 people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="299"
-                              value={basePrice12}
-                              onChange={(e) => setBasePrice12(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Higher price for personalized experience</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Medium Group (3-5 people) */}
-                    <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg shadow-green-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Medium Group</CardTitle>
-                            <p className="text-sm text-gray-600">3-5 people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="249"
-                              value={basePrice35}
-                              onChange={(e) => setBasePrice35(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Balanced pricing for small groups</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Large Group (6+ people) */}
-                    <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg shadow-purple-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Large Group</CardTitle>
-                            <p className="text-sm text-gray-600">6+ people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="199"
-                              value={basePrice6Plus}
-                              onChange={(e) => setBasePrice6Plus(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Best value for larger groups</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-
-                {/* Group Size Constraints */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Group Size Limits</h3>
-                    <p className="text-sm text-gray-600 mb-4">Define the minimum and maximum number of participants</p>
-                  </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700">Minimum Group Size</Label>
-                      <Input
-                        type="number"
-                        placeholder="2"
-                        value={minGroupSize}
-                        onChange={(e) => setMinGroupSize(e.target.value)}
-                        className="text-base"
-                        min="1"
-                      />
-                      <p className="text-xs text-gray-500">Minimum participants required to run the tour</p>
+                <div className="bg-gradient-to-r from-blue-50/80 via-purple-50/60 to-blue-50/80 p-6 rounded-2xl border border-blue-100/50">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                      <DollarSign className="w-6 h-6 text-white" />
                     </div>
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700">Maximum Group Size</Label>
+                    <div>
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Pricing & Availability</h2>
+                      <p className="text-gray-600 mt-1 font-medium">Set your tour price, available spots, and booking periods</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing & Capacity Section */}
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Tour Pricing */}
+                    <div className="space-y-4">
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Price Per Person (USD) <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <Input
+                          type="number"
+                          placeholder="299"
+                          value={pricePerPerson}
+                          onChange={(e) => setPricePerPerson(e.target.value)}
+                          className="pl-12 text-lg font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl shadow-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Fixed rate charged per person for this tour
+                      </p>
+                    </div>
+
+                    {/* Available Spots */}
+                    <div className="space-y-4">
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Available Spots <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="number"
                         placeholder="12"
-                        value={maxGroupSize}
-                        onChange={(e) => setMaxGroupSize(e.target.value)}
-                        className="text-base"
+                        value={availableSpots}
+                        onChange={(e) => setAvailableSpots(e.target.value)}
+                        className="text-lg font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl shadow-sm"
                         min="1"
                       />
-                      <p className="text-xs text-gray-500">Maximum participants for quality experience</p>
+                      <p className="text-xs text-gray-500">
+                        Total number of participants allowed for this tour
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1367,7 +1271,7 @@ export default function AddNewTour({ onClose }) {
                     </div>
                     <Button
                       onClick={openAddAvailabilityModal}
-                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg shadow-amber-500/25"
+                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg shadow-amber-500/25 rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:scale-105"
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Add Date Range
@@ -1381,7 +1285,7 @@ export default function AddNewTour({ onClose }) {
                       <p className="text-gray-500 mb-6">Add date ranges when this tour will be available</p>
                       <Button
                         onClick={openAddAvailabilityModal}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:scale-105"
                       >
                         <Calendar className="h-4 w-4 mr-2" />
                         Add First Date Range
@@ -1441,7 +1345,9 @@ export default function AddNewTour({ onClose }) {
                         <p className="text-gray-600 mt-2">
                           Set the start and end dates for this availability period
                         </p>
-                      </DialogHeader>                      <div className="space-y-6">
+                      </DialogHeader>
+
+                      <div className="space-y-6">
                         <div className="space-y-3">
                           <Label className="text-sm font-semibold text-gray-700">
                             Start Date <span className="text-red-500">*</span>
@@ -1491,7 +1397,8 @@ export default function AddNewTour({ onClose }) {
                         </Button>
                       </DialogFooter>
                     </div>
-                  </DialogContent>                </Dialog>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
 
@@ -1684,26 +1591,18 @@ export default function AddNewTour({ onClose }) {
                               <div className="p-2 bg-green-100 rounded-lg mr-3">
                                 <DollarSign className="h-5 w-5 text-green-600" />
                               </div>
-                              Pricing & Groups
+                              Pricing & Capacity
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="grid grid-cols-1 gap-4 text-sm">
                               <div>
-                                <span className="font-semibold text-gray-700">Small Group:</span>
-                                <p className="text-gray-600">{summary.pricing.smallGroup}</p>
+                                <span className="font-semibold text-gray-700">Price Per Person:</span>
+                                <p className="text-gray-600">{summary.pricing.pricePerPerson}</p>
                               </div>
                               <div>
-                                <span className="font-semibold text-gray-700">Medium Group:</span>
-                                <p className="text-gray-600">{summary.pricing.mediumGroup}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Large Group:</span>
-                                <p className="text-gray-600">{summary.pricing.largeGroup}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Group Size:</span>
-                                <p className="text-gray-600">{summary.pricing.groupSize}</p>
+                                <span className="font-semibold text-gray-700">Available Spots:</span>
+                                <p className="text-gray-600">{summary.pricing.availableSpots}</p>
                               </div>
                             </div>
                           </CardContent>
@@ -1755,7 +1654,8 @@ export default function AddNewTour({ onClose }) {
                             <div className="space-y-2">
                               {[
                                 { check: summary.basicInfo.name, label: 'Tour name' },
-                                { check: summary.pricing.smallGroup !== 'Not set', label: 'Pricing set' },
+                                { check: summary.pricing.pricePerPerson !== 'Not set', label: 'Price per person set' },
+                                { check: summary.pricing.availableSpots !== 'Not set', label: 'Available spots set' },
                                 { check: summary.itinerary.totalDays > 0, label: 'Itinerary created' },
                                 { check: summary.media.hasPrimaryImage, label: 'Primary image set' },
                                 { check: summary.availability.totalPeriods > 0, label: 'Availability set' }
