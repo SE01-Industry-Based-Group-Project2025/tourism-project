@@ -83,7 +83,7 @@ export default function AddNewTour({ onClose }) {
   const [uploadedImages, setUploadedImages] = useState([]);
 
   const { getAuthHeaders } = useAuth();
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const API_BASE = 'http://localhost:8080';
   const TOURS_API = `${API_BASE}/api/tours`;
 
   const handleNext = () => {
@@ -503,22 +503,22 @@ export default function AddNewTour({ onClose }) {
         hasPrimaryImage: uploadedImages.some(img => img.isPrimary)
       }
     };
-  };
-  const ProgressIndicator = () => (
+  };  const ProgressIndicator = () => (
     <div className="mb-8">
       {/* Header with Actions */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8 p-6 bg-gradient-to-r from-blue-50/50 via-purple-50/30 to-blue-50/50 rounded-2xl border border-blue-100/50">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-700 bg-clip-text text-transparent">
             Create New Tour
           </h1>
-          <p className="text-gray-600 mt-2">Build your perfect tour experience step by step</p>
-        </div>        <div className="flex items-center space-x-3">
+          <p className="text-gray-600 mt-2 font-medium">Build your perfect tour experience step by step</p>
+        </div>
+        <div className="flex items-center space-x-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full"
+            className="text-gray-500 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 p-3 rounded-xl transition-all duration-300 hover:shadow-lg"
           >
             <XIcon className="h-6 w-6" />
           </Button>
@@ -526,117 +526,136 @@ export default function AddNewTour({ onClose }) {
       </div>
       
       {/* Progress Steps */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-2xl">
         {steps.map((step, index) => (
           <React.Fragment key={step.id}>
             <div className="flex flex-col items-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${
                   currentStep >= step.id 
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25' 
-                    : 'bg-gray-200 text-gray-500'
+                    ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 scale-110' 
+                    : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-blue-300'
                 }`}
               >
-                {step.id}
+                {currentStep > step.id ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
               </div>
-              <p className={`mt-2 text-xs font-medium ${currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'}`}>
+              <p className={`mt-3 text-xs font-semibold ${currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'}`}>
                 {step.name}
               </p>
             </div>
             {index < steps.length - 1 && (
-              <div className={`flex-1 h-1 rounded-full mx-4 transition-all duration-500 ${
-                currentStep > step.id ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gray-200'
+              <div className={`flex-1 h-2 rounded-full mx-4 transition-all duration-500 ${
+                currentStep > step.id ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-200'
               }`} />
             )}
           </React.Fragment>
         ))}
       </div>
     </div>
-  );
-  return (
+  );return (
     <div className="w-full">
-      {/* Main Card - Full Width */}
-      <Card className="bg-white/70 backdrop-blur-xl border-0 shadow-2xl shadow-gray-900/10 rounded-2xl overflow-hidden">
+      {/* Main Card - Full Width with Enhanced Skydash Styling */}
+      <Card className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl shadow-gray-900/10 rounded-3xl overflow-hidden">
         <CardContent className="p-8">
           <ProgressIndicator />            {/* Step 1: Basic Information */}
             {currentStep === 1 && (
-              <div className="space-y-10">
-                <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Basic Information</h2>
-                  <p className="text-gray-600 mt-2">Let's start with the fundamentals of your tour</p>
+              <div className="space-y-8">
+                <div className="bg-gradient-to-r from-blue-50/80 via-purple-50/60 to-blue-50/80 p-6 rounded-2xl border border-blue-100/50">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Basic Information</h2>
+                      <p className="text-gray-600 mt-1 font-medium">Let's start with the fundamentals of your tour</p>
+                    </div>
+                  </div>
                 </div>                {/* Tour Name */}
-                <div className="mb-6">
-                  <Label className="text-sm font-semibold text-gray-700">
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-3 block">
                     Tour Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     placeholder="e.g., 8-Day Sri Lankan Cultural Heritage Tour"
                     value={tourName}
                     onChange={(e) => setTourName(e.target.value)}
-                    className="text-base"
+                    className="text-base bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 </div>
 
                 {/* Category and Duration */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700">Tour Category</Label>
-                    <Select
-                      value={tourCategory}
-                      onValueChange={setTourCategory}
-                      placeholder="Select category"
-                      options={tourCategories.map(cat => ({ value: cat, label: cat }))}
-                    />                  </div>
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700">Duration</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="8"
-                        value={durationValue}
-                        onChange={(e) => setDurationValue(e.target.value)}
-                        className="flex-1"
-                      />
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Tour Category</Label>
                       <Select
-                        value={durationUnit}
-                        onValueChange={setDurationUnit}
-                        options={durationUnits.map(unit => ({ value: unit, label: unit }))}
-                        className="w-32"
+                        value={tourCategory}
+                        onValueChange={setTourCategory}
+                        placeholder="Select category"
+                        options={tourCategories.map(cat => ({ value: cat, label: cat }))}
+                        className="bg-white/80 border-gray-200 focus:border-blue-500"
                       />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Duration</Label>
+                      <div className="flex gap-3">
+                        <Input
+                          type="number"
+                          placeholder="8"
+                          value={durationValue}
+                          onChange={(e) => setDurationValue(e.target.value)}
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                        <Select
+                          value={durationUnit}
+                          onValueChange={setDurationUnit}
+                          options={durationUnits.map(unit => ({ value: unit, label: unit }))}
+                          className="w-32 bg-white/80 border-gray-200 focus:border-blue-500"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Short Description */}
-                <div className="mb-6">
-                  <Label className="text-sm font-semibold text-gray-700">Short Description</Label>
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-3 block">Short Description</Label>
                   <Textarea
                     rows={3}
                     placeholder="A brief overview of the tour (max 200 characters)"
                     value={shortDescription}
                     onChange={(e) => setShortDescription(e.target.value)}
-                  />                  <p className="text-xs text-gray-500 mt-1">
+                    className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
                     {shortDescription.length}/200 characters
                   </p>
                 </div>
 
                 {/* Tour Highlights */}
-                <div className="mb-6">
-                  <Label className="text-sm font-semibold text-gray-700">Tour Highlights</Label>
-                  <div className="space-y-3">
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-4 block">Tour Highlights</Label>                  <div className="space-y-3">
                     {highlights.map((highlight, index) => (
                       <div key={index} className="flex items-center gap-3">
                         <Input
                           value={highlight}
                           onChange={(e) => handleHighlightChange(index, e.target.value)}
                           placeholder={`Highlight ${index + 1}`}
-                          className="flex-1"
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
                         />
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveHighlight(index)}
-                          className="text-gray-500 hover:text-red-500 p-2"
+                          className="text-gray-500 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 p-2 rounded-xl transition-all duration-300"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -647,7 +666,7 @@ export default function AddNewTour({ onClose }) {
                     type="button"
                     variant="outline"
                     onClick={handleAddHighlight}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="mt-4 text-blue-600 border-blue-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-400 transition-all duration-300 rounded-xl"
                   >
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Add Highlight
@@ -655,14 +674,14 @@ export default function AddNewTour({ onClose }) {
                 </div>
 
                 {/* Difficulty Level */}
-                <div className="space-y-4">
-                  <Label className="text-sm font-semibold text-gray-700">Difficulty Level</Label>
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                  <Label className="text-sm font-bold text-gray-700 block">Difficulty Level</Label>
                   <RadioGroup value={difficulty} onValueChange={setDifficulty}>
                     <div className="flex space-x-8">
                       {difficultyLevels.map(level => (
-                        <div key={level} className="flex items-center space-x-2">
-                          <RadioGroupItem value={level} />
-                          <Label className="text-sm text-gray-700 font-normal cursor-pointer">
+                        <div key={level} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
+                          <RadioGroupItem value={level} className="border-2 border-gray-300 data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500" />
+                          <Label className="text-sm text-gray-700 font-medium cursor-pointer">
                             {level}
                           </Label>
                         </div>
@@ -1760,34 +1779,42 @@ export default function AddNewTour({ onClose }) {
                   })()}
                 </div>
               </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-200">
+            )}            {/* Navigation Buttons */}
+            <div className="flex justify-between items-center mt-8 pt-6 bg-gradient-to-r from-gray-50/50 to-blue-50/30 rounded-2xl p-6 border border-gray-100">
               <Button
                 variant="outline"
                 onClick={handleBack}
                 disabled={currentStep === 1}
-                className="bg-white/80 backdrop-blur-sm border-gray-200 disabled:opacity-50"
+                className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gray-50 disabled:opacity-50 rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:shadow-md"
               >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
                 Previous
               </Button>
               
-              <div className="text-sm text-gray-500">
+              <div className="text-sm font-semibold text-gray-600 bg-white/60 px-4 py-2 rounded-xl border border-gray-200">
                 Step {currentStep} of {steps.length}
               </div>
 
               {currentStep < steps.length ? (
                 <Button
                   onClick={handleNext}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25"
+                  className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/30 rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:shadow-xl hover:scale-105"
                 >
                   Next: {steps[currentStep]?.name}
-                </Button>              ) : (
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Button>
+              ) : (
                 <Button
                   onClick={handlePublish}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25"
+                  className="bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 hover:from-green-600 hover:via-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/30 rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:shadow-xl hover:scale-105"
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                   Publish Tour
                 </Button>
               )}</div>

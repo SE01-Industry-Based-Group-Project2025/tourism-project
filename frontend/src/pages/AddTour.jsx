@@ -9,11 +9,10 @@ export default function AddTour() {
   const handleClose = () => {
     navigate('/admin/tours');
   };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
       <div className="w-full p-6">
-        {/* Add New Tour Component - Full Width */}
+        {/* Add New Tour Component - Full Width with Enhanced Styling */}
         <AddNewTour onClose={handleClose} />
       </div>
     </div>

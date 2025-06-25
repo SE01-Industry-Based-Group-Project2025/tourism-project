@@ -60,9 +60,8 @@ export default function AdminLayout() {
   };
 
   const { title, subtitle } = getPageInfo(location.pathname);
-
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
       {/* Sidebar occupies fixed width on left */}
       <AdminSidebar />
 
@@ -75,7 +74,7 @@ export default function AdminLayout() {
         />
 
         {/* Main content area (scrollable) */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/50">
           <Outlet />
         </main>
       </div>

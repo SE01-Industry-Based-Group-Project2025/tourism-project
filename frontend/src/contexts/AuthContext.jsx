@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken]   = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const API_BASE = 'http://localhost:8080';
   const API = `${API_BASE}/api/auth`;
 
   // Security: Check token expiration
@@ -84,6 +84,7 @@ export const AuthProvider = ({ children }) => {
 
   // 2) Login: POST /login, then verify
   const login = async (email, password) => {
+    console.log(token)
     try {
       const res = await fetch(`${API}/login`, {
         method: 'POST',

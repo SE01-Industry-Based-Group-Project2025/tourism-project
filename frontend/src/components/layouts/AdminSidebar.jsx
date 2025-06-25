@@ -15,7 +15,6 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
-  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -35,23 +34,24 @@ const navItems = [
 export default function AdminSidebar() {
   const location = useLocation();
   
-  return (
-    <Sidebar className="w-64 bg-gradient-to-b from-[#0f4c81] via-[#1e5f99] to-[#0f4c81] text-white min-h-screen flex flex-col shadow-2xl border-r border-white/10">
+  return (    <Sidebar className="w-64 bg-gradient-to-b from-slate-900 via-blue-900/95 to-purple-900/90 backdrop-blur-xl text-white min-h-screen flex flex-col shadow-2xl border-r border-white/10">
       {/* Logo header */}
-      <SidebarHeader className="h-24 flex items-center justify-center p-6 border-b border-white/20 bg-white/5 backdrop-blur-sm">
+      <SidebarHeader className="h-24 flex items-center justify-center p-6 border-b border-white/20 bg-gradient-to-r from-white/10 via-white/5 to-white/10 backdrop-blur-sm">
         <div className="flex items-center gap-3 group">
           <div className="relative">
-            <Compass className="h-10 w-10 text-white drop-shadow-lg group-hover:rotate-12 transition-transform duration-300" />
-            <div className="absolute -inset-1 bg-white/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity duration-300"></div>
+            <div className="relative p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl backdrop-blur-sm border border-white/20">
+              <Compass className="h-8 w-8 text-white drop-shadow-lg group-hover:rotate-12 transition-transform duration-300" />
+            </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-bold text-white tracking-wide drop-shadow-sm">SLTOURPAL</span>
-            <span className="text-xs text-white/70 font-medium">Tourism Admin</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent tracking-wide drop-shadow-sm">SLTOURPAL</span>
+            <span className="text-xs text-white/70 font-medium tracking-wider">Tourism Admin</span>
           </div>
         </div>
       </SidebarHeader>      {/* Nav items */}
-      <SidebarContent className="px-3 py-6 flex-1 overflow-hidden">
-        <SidebarMenu className="space-y-2">
+      <SidebarContent className="px-4 py-6 flex-1 overflow-hidden">
+        <SidebarMenu className="space-y-3">
           {navItems.map(({ to, label, icon: Icon }) => {
             const isActive = location.pathname === to;
 
@@ -61,61 +61,40 @@ export default function AdminSidebar() {
                   <NavLink
                     to={to}
                     className={
-                      "group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 relative overflow-hidden " +
+                      "group flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden " +
                       (isActive
-                        ? "bg-white text-[#0f4c81] shadow-lg shadow-white/20 scale-[1.02]"
-                        : "hover:bg-white/15 text-white hover:scale-[1.01] hover:shadow-md hover:shadow-white/10")
+                        ? "bg-gradient-to-r from-white/95 to-white/90 text-slate-800 shadow-xl shadow-white/20 scale-[1.02] border border-white/30"
+                        : "hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 text-white hover:scale-[1.01] hover:shadow-lg hover:shadow-white/10 border border-transparent hover:border-white/20")
                     }
                   >
-                    <div className={`p-2 rounded-lg transition-all duration-300 ${
+                    <div className={`p-2.5 rounded-xl transition-all duration-300 ${
                       isActive 
-                        ? "bg-[#0f4c81]/10" 
-                        : "bg-white/10 group-hover:bg-white/20"
+                        ? "bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30" 
+                        : "bg-white/10 group-hover:bg-gradient-to-br group-hover:from-blue-500/50 group-hover:to-purple-500/50 backdrop-blur-sm"
                     }`}>
                       <Icon className={`h-5 w-5 flex-shrink-0 transition-all duration-300 ${
                         isActive 
-                          ? "text-[#0f4c81]" 
+                          ? "text-white" 
                           : "text-white group-hover:scale-110"
                       }`} />
                     </div>
-                    <span className={`font-medium text-sm transition-all duration-300 ${
-                      isActive ? "text-[#0f4c81]" : "text-white"
+                    <span className={`font-semibold text-sm transition-all duration-300 ${
+                      isActive ? "text-slate-800" : "text-white"
                     }`}>
                       {label}
                     </span>
                     {isActive && (
-                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#0f4c81] rounded-l-full"></div>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg shadow-blue-500/50"></div>
+                    )}
+                    {!isActive && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
-          })}
-        </SidebarMenu>
-      </SidebarContent>      {/* Profile footer */}
-      <SidebarFooter className="p-4 mt-auto">
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Admin User</p>
-              <p className="text-xs text-white/70">Administrator</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Collapsed avatar button (still hidden) */}
-        <div className="hidden mt-2">
-          <SidebarMenuButton asChild>
-            <a
-              href="/admin/profile"
-              className="h-8 w-8 rounded-full bg-gray-300 block"
-            />
-          </SidebarMenuButton>
-        </div>
-      </SidebarFooter>
+          })}        </SidebarMenu>
+      </SidebarContent>
     </Sidebar>
   );
 }
