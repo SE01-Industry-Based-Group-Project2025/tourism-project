@@ -28,13 +28,13 @@ export default function App() {
   const navigate = useNavigate();
   
   // Security monitoring hook
-  useSecurityMonitor();
-  // Security: Monitor authentication state changes with enhanced protection
+  useSecurityMonitor();  // Security: Monitor authentication state changes with enhanced protection
   useEffect(() => {
     const handleAuthChange = () => {
       const currentPath = window.location.pathname;
       
-      // If user becomes unauthenticated and is on a protected route
+      // Only redirect if user becomes unauthenticated and is on a protected route
+      // Don't redirect if they're on public routes like /, /login, /register
       if (!isAuthenticated && currentPath.startsWith('/admin')) {
         // Clear all possible caches and storage
         localStorage.clear();
@@ -86,15 +86,14 @@ export default function App() {
       clearInterval(protectionInterval);
     };
   }, [isAuthenticated]);
-
   return (
     <Routes>
+      {/* Public landing page - should be first */}
+      <Route path="/" element={<LandingPage />} />
+      
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
-      {/* Public landing page */}
-       <Route path="/" element={<LandingPage />} />
 
       {/* Tourist (any logged‐in user) */}
         <Route
@@ -122,10 +121,8 @@ export default function App() {
         <Route path="quote-requests" element={<QuoteRequests />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<Analytics />} />
-      </Route>
-
-      {/* Fallback: if someone tries anything else */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      </Route>      {/* Fallback: if someone tries anything else */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

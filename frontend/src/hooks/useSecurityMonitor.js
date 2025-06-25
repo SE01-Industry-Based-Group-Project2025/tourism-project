@@ -9,7 +9,14 @@ export const useSecurityMonitor = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Only redirect to login if trying to access protected routes while unauthenticated
+    // Allow access to public routes: /, /login, /register
+    const protectedRoutes = ['/admin', '/dashboard'];
+    const isProtectedRoute = protectedRoutes.some(route => 
+      location.pathname.startsWith(route)
+    );
+    
+    if (!isAuthenticated && isProtectedRoute) {
       navigate('/login');
     }
   }, [isAuthenticated, location.pathname, navigate]);
