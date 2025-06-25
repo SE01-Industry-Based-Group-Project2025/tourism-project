@@ -10,29 +10,17 @@ import NewDestinationButton from '../components/ui/NewDestinationButton';
 import DestinationFormModal from '../components/ui/DestinationFormModal';
 import DeleteConfirmModal from '../components/ui/DeleteConfirmModal';
 import PaginationControls from '../components/ui/PaginationControls';
+import { useAuth }    from '../contexts/AuthContext';
 
-const dummyData = [
-  { name: 'Ella', region: 'Hill Country' },
-  { name: 'Galle', region: 'Southern' },
-  { name: 'Kandy', region: 'Central' },
-  { name: 'Sigiriya', region: 'Central' },
-  { name: 'Mirissa', region: 'Southern' },
-  { name: 'Nuwara Eliya', region: 'Hill Country' },
-  { name: 'Trincomalee', region: 'Eastern' },
-];
 
-const dummyActivities = [
-  { name: 'Hiking', region: 'Hill Country' },
-  { name: 'Surfing', region: 'Southern' },
-  { name: 'Temple Visit', region: 'Central' },
-];
+
 
 const Places = () => {
   const [activeTab, setActiveTab] = useState('Destinations');
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
   const [searchTerm, setSearchTerm] = useState('');
-  const [destinations, setDestinations] = useState(dummyData);
-  const [activities, setActivities] = useState(dummyActivities);
+  const [destinations, setDestinations] = useState([]);
+  const [activities, setActivities] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -41,6 +29,46 @@ const Places = () => {
   const [deleteType, setDeleteType] = useState('destination');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
+
+  const {getAuthHeaders} = useAuth();
+  const API_BASE = 'http://localhost:8080';
+  const PLACE_API = `${API_BASE}/api/places`;
+  const ACTIVITY_API = `${API_BASE}/api/activities`;
+
+
+  // Fetch destinations from API
+  const fetchDestinations = async () => {
+    try {
+      const res = await fetch(`${PLACE_API}/getAllPlace`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      setDestinations(data);
+    } catch (err) {
+      console.error('Failed to fetch destinations:', err);
+    }
+  };
+
+  // Fetch activities from API
+  const fetchActivities = async () => {
+    try {
+      const res = await fetch(`${ACTIVITY_API}/getAllActivity`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      setActivities(data);
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+    }
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchDestinations();
+    fetchActivities();
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -76,38 +104,77 @@ const Places = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = (item) => {
-    const data = deleteType === 'destination' ? destinations : activities;
-    const setter = deleteType === 'destination' ? setDestinations : setActivities;
-
-    const updated = data.filter(
-      (p) => p.name !== item.name || p.region !== item.region
-    );
-    setter(updated);
+  // DELETE endpoint
+  const confirmDelete = async (item) => {
+    try {
+      if (deleteType === 'destination') {
+        await fetch(`${PLACE_API}/deletePlace/${item.id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+        await fetchDestinations();
+      } else {
+        await fetch(`${ACTIVITY_API}/deleteActivity/${item.id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+        await fetchActivities();
+      }
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
     setDeleteTarget(null);
     setShowDeleteConfirm(false);
   };
 
-  const handleAddOrUpdate = (updatedItem) => {
-    const data = editType === 'destination' ? destinations : activities;
-    const setter = editType === 'destination' ? setDestinations : setActivities;
-
-    if (editData) {
-      const updatedList = data.map((p) =>
-        p.name === editData.name && p.region === editData.region
-          ? updatedItem
-          : p
-      );
-      setter(updatedList);
-    } else {
-      setter([...data, updatedItem]);
+  // ADD/UPDATE endpoint
+  const handleAddOrUpdate = async (updatedItem) => {
+    try {
+      if (editType === 'destination') {
+        if (editData && editData.id) {
+          // Update
+          await fetch(`${PLACE_API}/updatePlace/${editData.id}`, {
+            method: 'PUT',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedItem),
+          });
+        } else {
+          // Add
+          await fetch(`${PLACE_API}/addPlace`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedItem),
+          });
+        }
+        await fetchDestinations();
+      } else {
+        if (editData && editData.id) {
+          // Update
+          await fetch(`${ACTIVITY_API}/updateActivity/${editData.id}`, {
+            method: 'PUT',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedItem),
+          });
+        } else {
+          // Add
+          await fetch(`${ACTIVITY_API}/addActivity`, {
+            method: 'POST',
+            headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedItem),
+          });
+        }
+        await fetchActivities();
+      }
+    } catch (err) {
+      console.error('Add/Update failed:', err);
     }
-
     setShowModal(false);
     setEditData(null);
-  };  return (
+  };
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-      <div className="space-y-8 p-6">
+      <div className="p-6 space-y-8">
         {/* Header */}
         <PageHeader
           title="Places Management"
@@ -120,7 +187,8 @@ const Places = () => {
           )}
         />
 
-        {/* Stats Cards */}        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <StatsCard
             title="Total Destinations"
             value={destinations.length.toString()}
@@ -175,7 +243,7 @@ const Places = () => {
         <ContentCard>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+              <div className="p-3 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -183,7 +251,7 @@ const Places = () => {
               <h3 className="text-xl font-bold text-gray-900">Search & Filter</h3>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
+          <div className="flex flex-col items-center gap-6 sm:flex-row">
             <RegionFilter
               selectedRegion={selectedRegion}
               onChange={setSelectedRegion}
@@ -194,6 +262,7 @@ const Places = () => {
             <NewDestinationButton
               onClick={() => {
                 setEditType(activeTab === 'Destinations' ? 'destination' : 'activity');
+                setEditData(null);
                 setShowModal(true);
               }}
             >
