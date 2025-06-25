@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.jsx
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -15,7 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken]   = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API = 'http://localhost:8080/api/auth';
+  const API_BASE = 'http://localhost:8080';
+  const API = `${API_BASE}/api/auth`;
 
   // Security: Check token expiration
   const isTokenExpired = (token) => {
@@ -28,21 +30,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Security: Clear all auth data
+  // Clear auth data without touching caches or history
   const clearAuthData = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    // Also clear any other sensitive data
-    localStorage.removeItem('user');
-    sessionStorage.clear();
   };
 
-  // 1) On mount, if token exists, verify it to get full user DTO
+  const location = useLocation();
+
+  // Check token on mount and whenever token changes
   useEffect(() => {
-    (async () => {
+    const verify = async () => {
       if (token) {
-        // Check if token is expired before making API call
         if (isTokenExpired(token)) {
           clearAuthData();
         } else {
@@ -50,23 +50,16 @@ export const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
-    })();
-  }, [token]); // Include token in dependency array for security
+    };
+    verify();
+  }, [token]);
 
-  // Security: Auto-logout on token expiration
+  // Check for expiration on navigation changes
   useEffect(() => {
-    if (token && !loading) {
-      const checkTokenExpiration = () => {
-        if (isTokenExpired(token)) {
-          logout();
-        }
-      };
-
-      // Check every minute
-      const interval = setInterval(checkTokenExpiration, 60000);
-      return () => clearInterval(interval);
+    if (token && isTokenExpired(token)) {
+      clearAuthData();
     }
-  }, [token, loading]);
+  }, [location.pathname, token]);
   // Helper: fetch /verify, set user or clear on failure
   const fetchAndSetUser = async (jwt) => {
     try {
@@ -91,6 +84,7 @@ export const AuthProvider = ({ children }) => {
 
   // 2) Login: POST /login, then verify
   const login = async (email, password) => {
+    console.log(token)
     try {
       const res = await fetch(`${API}/login`, {
         method: 'POST',
@@ -128,9 +122,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       return { success: false, error: 'Network error' };
     }
-  };
-
-  // 4) Logout: hit endpoint, then clear and redirect
+  };  // 4) Logout: hit endpoint and clear auth state
   const logout = async () => {
     try {
       if (token) {
@@ -140,11 +132,9 @@ export const AuthProvider = ({ children }) => {
         });
       }
     } catch {
-      // ignore
+      // ignore server errors during logout
     } finally {
       clearAuthData();
-      // Force navigation to login and prevent back navigation
-      window.location.href = '/login';
     }
   };
 

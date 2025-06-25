@@ -81,52 +81,50 @@ export default function Analytics() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <ContentCard>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">        {/* Revenue Chart */}
+        <ContentCard className="bg-white/90 backdrop-blur-md border border-white/20">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
+            <h3 className="text-2xl font-bold text-gray-900">Revenue Trend</h3>
           </div>
-          <div className="h-64 flex items-end justify-between gap-2 px-4">
+          <div className="h-72 flex items-end justify-between gap-3 px-6 bg-gradient-to-br from-slate-50/50 to-indigo-50/30 rounded-xl py-6">
             {chartData.map((data, index) => (
               <div key={index} className="flex flex-col items-center flex-1">
-                <div className="w-full bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-md mb-2 relative group cursor-pointer hover:from-indigo-600 hover:to-indigo-500 transition-colors"
-                     style={{ height: `${(data.revenue / 20000) * 200}px` }}>
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    ${data.revenue.toLocaleString()}
+                <div className="w-full bg-gradient-to-t from-indigo-600 via-indigo-500 to-indigo-400 rounded-t-xl mb-3 relative group cursor-pointer hover:from-indigo-700 hover:via-indigo-600 hover:to-indigo-500 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                     style={{ height: `${(data.revenue / 20000) * 240}px` }}>
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm text-white text-xs py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 font-bold shadow-lg">                    ${data.revenue.toLocaleString()}
                   </div>
                 </div>
-                <span className="text-xs text-gray-600 font-medium">{data.month}</span>
+                <span className="text-sm text-gray-700 font-bold">{data.month}</span>
               </div>
             ))}
           </div>
         </ContentCard>
 
         {/* Bookings Chart */}
-        <ContentCard>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <ContentCard className="bg-white/90 backdrop-blur-md border border-white/20">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Booking Trend</h3>
+            <h3 className="text-2xl font-bold text-gray-900">Booking Trend</h3>
           </div>
-          <div className="h-64 flex items-end justify-between gap-2 px-4">
+          <div className="h-72 flex items-end justify-between gap-3 px-6 bg-gradient-to-br from-slate-50/50 to-blue-50/30 rounded-xl py-6">
             {chartData.map((data, index) => (
               <div key={index} className="flex flex-col items-center flex-1">
-                <div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-md mb-2 relative group cursor-pointer hover:from-blue-600 hover:to-blue-500 transition-colors"
-                     style={{ height: `${(data.bookings / 70) * 200}px` }}>
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="w-full bg-gradient-to-t from-blue-600 via-blue-500 to-blue-400 rounded-t-xl mb-3 relative group cursor-pointer hover:from-blue-700 hover:via-blue-600 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                     style={{ height: `${(data.bookings / 70) * 240}px` }}>
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm text-white text-xs py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 font-bold shadow-lg">
                     {data.bookings} bookings
                   </div>
                 </div>
-                <span className="text-xs text-gray-600 font-medium">{data.month}</span>
+                <span className="text-sm text-gray-700 font-bold">{data.month}</span>
               </div>
             ))}
           </div>

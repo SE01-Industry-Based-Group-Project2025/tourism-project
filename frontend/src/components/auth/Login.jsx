@@ -68,106 +68,140 @@ export default function Login() {
       setErrors({ general: result.error || 'Login failed' });
       setLoading(false);
     }
-  };
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/50">
-        <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl shadow-lg">
-              {/* Lock Icon */}
-              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 
-                         00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7
-                         a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">Welcome Back</h2>
-          <p className="mt-3 text-sm text-gray-600 font-medium">Sign in to your SLTOURPAL account</p>
-        </div>
-
-        {errors.general && (
-          <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-red-200 rounded-lg">
-                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+  };  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+      
+      <div className="relative max-w-md w-full mx-4">
+        {/* Main login card */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 space-y-8">
+          <div className="text-center">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl blur opacity-75"></div>
+                <div className="relative p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
+                  {/* Modern lock icon */}
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 
+                             00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7
+                             a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
               </div>
-              <p className="text-sm text-red-800 font-medium">{errors.general}</p>
             </div>
-          </div>
-        )}
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-2">
+              Welcome Back
+            </h2>
+            <p className="text-gray-300 font-medium">Sign in to your SLTOURPAL admin account</p>
+          </div>          {errors.general && (
+            <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm border border-red-400/30 rounded-xl p-4 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 bg-red-500/30 rounded-lg backdrop-blur-sm">
+                  <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-red-200 font-medium">{errors.general}</p>
+              </div>
+            </div>
+          )}          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter your email"
+                    className={`bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder-gray-400 focus:ring-blue-400 focus:border-blue-400 ${
+                      errors.email ? 'border-red-400 focus:ring-red-400' : ''
+                    }`}
+                  />
+                </div>
+                {errors.email && <p className="mt-2 text-sm text-red-300">{errors.email}</p>}
+              </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                className={`w-full ${errors.email ? 'border-red-300 focus:ring-red-500' : ''}`}
-              />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    className={`bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder-gray-400 focus:ring-blue-400 focus:border-blue-400 ${
+                      errors.password ? 'border-red-400 focus:ring-red-400' : ''
+                    }`}
+                  />
+                </div>
+                {errors.password && <p className="mt-2 text-sm text-red-300">{errors.password}</p>}
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                className={`w-full ${errors.password ? 'border-red-300 focus:ring-red-500' : ''}`}
-              />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-500 focus:ring-blue-400 border-white/30 rounded bg-white/10 backdrop-blur-sm"
+                />
+                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-300">
+                  Remember me
+                </label>
+              </div>
+              <div className="text-sm">
+                <Link
+                  to="/forgot-password"
+                  className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input id="remember-me" name="remember-me" type="checkbox"
-                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-              <label htmlFor="remember-me" className="ml-2 text-sm text-gray-900">Remember me</label>
-            </div>
-            <div className="text-sm">
-              <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                Forgot your password?
+            <Button
+              type="submit"
+              disabled={loading}
+              className="relative w-full overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                  Signing in...
+                </span>
+              ) : (
+                <span className="relative z-10">Sign In</span>
+              )}
+              {/* Button glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/50 to-purple-400/50 blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </Button>
+
+            <p className="text-center text-sm text-gray-300">
+              Don&apos;t have an account?{' '}
+              <Link
+                to="/register"
+                className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Sign up here
               </Link>
-            </div>
-          </div>
-
-          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 
-                  text-white py-3 px-4 rounded-lg font-medium transition-colors">
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                Signing in...
-              </span>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-
-          <p className="text-center text-sm text-gray-600">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Sign up here
-            </Link>
-          </p>
-        </form>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

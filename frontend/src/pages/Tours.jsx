@@ -7,7 +7,7 @@ import TourFilterBar from "../components/tours/TourFilterBar";
 import TourTable from "../components/tours/TourTable";
 import PaginationControls from "../components/tours/PaginationControls";
 import { Button } from "../components/ui/Button";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // Static tour data
 const toursData = [
@@ -69,6 +69,8 @@ const toursData = [
 ];
 
 export default function Tours() {
+  const navigate = useNavigate();
+  
   // Filter & pagination state
   const [searchValue, setSearchValue] = useState("");
   const [statusValue, setStatusValue] = useState("all");
@@ -120,15 +122,15 @@ export default function Tours() {
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
             </svg>
-          )}
-          action={
-            <Button asChild className="bg-[#0f4c81] hover:bg-[#0d3f6b] text-white">
-              <Link to="/admin/tours/new" className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                New Tour
-              </Link>
+          )}          action={
+            <Button 
+              onClick={() => navigate('/admin/tours/new')}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 transition-all duration-200"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Tour
             </Button>
           }
         />
@@ -201,17 +203,14 @@ export default function Tours() {
         {/* Tours Table */}
         <ContentCard noPadding>
           <TourTable tours={paginated} onView={handleView} onEdit={handleEdit} />
-        </ContentCard>
-
-        {/* Pagination */}
+        </ContentCard>        {/* Pagination */}
         <div className="flex justify-center">
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
             onPrevious={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             onNext={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-          />
-        </div>
+          />        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// src/components/ui/button.jsx
+// src/components/ui/Button.jsx
 import React from "react";
 
 const buttonVariants = {
