@@ -12,7 +12,7 @@ import Users from "./pages/Users";
 import QuoteRequests from "./pages/QuoteRequests";
 import Reviews from "./pages/Reviews";
 import Analytics from "./pages/Analytics";
-import LandingPage      from "./pages/LandingPage";
+import LandingPage from "./pages/LandingPage";
 
 // Auth
 import Login from "./components/auth/Login";

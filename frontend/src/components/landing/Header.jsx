@@ -1,80 +1,82 @@
 // src/components/landing/Header.jsx
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const sections = ["home","about","packages","gallery","faq","contact"];
 
   return (
-    <header className="fixed w-full bg-white shadow-sm z-50">
+    <header className="fixed top-0 w-full bg-white shadow-md z-50">
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
-        <a href="#intro" className="flex items-center">
-          <img src="/assets/logo_letters.png" className="h-8" alt="SL Tour Pal" />
+        {/* logo + text */}
+        <a href="#home" className="flex items-center space-x-2">
+          <img
+            src="https://www.sltourpal.com/img/logo_letters.png"
+            className="h-8"
+            alt="SLTourPal logo"
+          />
+          <span className="text-xl font-display text-sl-navy">SLTourPal</span>
         </a>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center space-x-6 font-display text-gray-700">
-          {["Home", "About", "Packages", "Gallery", "FAQ", "Contact"].map((section) => (
+        {/* desktop nav */}
+        <nav className="hidden md:flex items-center space-x-8 text-slate-700 font-display">
+          {sections.map(s => (
             <a
-              key={section}
-              href={`#${section.toLowerCase()}`}
-              className="hover:text-primary capitalize"
+              key={s}
+              href={`#${s}`}
+              className="hover:text-sl-red transition"
             >
-              {section}
+              {s[0].toUpperCase() + s.slice(1)}
             </a>
           ))}
-
-          {/* Auth buttons */}
           <Link
             to="/login"
-            className="px-4 py-2 font-medium text-white bg-primary rounded hover:bg-primary/90"
+            className="px-4 py-2 border border-sl-red text-red-600 hover:bg-sl-red hover:text-white rounded transition"
           >
             Login
           </Link>
           <Link
             to="/register"
-            className="px-4 py-2 font-medium text-primary border-2 border-primary rounded hover:bg-primary hover:text-white"
+            className="px-4 py-2 bg-sl-red text-red-600 hover:bg-opacity-90 rounded transition"
           >
             Sign Up
           </Link>
         </nav>
 
-        {/* Mobile menu toggle */}
+        {/* mobile toggle */}
         <button
           className="md:hidden text-2xl"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen(o => !o)}
           aria-label="Toggle menu"
         >
           &#9776;
         </button>
       </div>
 
-      {/* Mobile nav */}
+      {/* mobile menu */}
       {open && (
         <div className="md:hidden bg-white shadow-lg">
-          {["home", "about", "packages", "gallery", "faq", "contact"].map((sec) => (
+          {sections.map(s => (
             <a
-              key={sec}
-              href={`#${sec}`}
-              className="block px-6 py-3 text-gray-700 hover:bg-light capitalize"
+              key={s}
+              href={`#${s}`}
+              className="block px-6 py-3 text-slate-700 hover:bg-light"
               onClick={() => setOpen(false)}
             >
-              {sec.charAt(0).toUpperCase() + sec.slice(1)}
+              {s[0].toUpperCase() + s.slice(1)}
             </a>
           ))}
-
-          {/* Auth buttons (mobile) */}
           <Link
             to="/login"
-            className="block px-6 py-3 text-white bg-primary text-center font-medium hover:bg-primary/90"
+            className="block px-6 py-3 text-sl-red hover:bg-light"
             onClick={() => setOpen(false)}
           >
             Login
           </Link>
           <Link
             to="/register"
-            className="block px-6 py-3 text-primary border border-primary text-center font-medium hover:bg-primary hover:text-white"
+            className="block px-6 py-3 bg-red-50 text-red-950 hover:bg-opacity-90"
             onClick={() => setOpen(false)}
           >
             Sign Up
