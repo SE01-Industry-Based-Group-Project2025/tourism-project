@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { RadioGroup, RadioGroupItem } from '../ui/RadioGroup';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/Accordion';
@@ -36,12 +35,27 @@ const steps = [
 ];
 
 const regions = ["Central", "Coastal", "Hill Country", "Northern", "Southern", "Western", "Eastern", "North Central", "North Western", "Uva", "Sabaragamuwa"];
-const tourCategories = ["Adventure", "Cultural", "Nature & Wildlife", "Wellness & Spa", "Historical", "Culinary", "Luxury", "Beach Holidays", "Spiritual Journeys"];
+const tourCategories = [
+  "Adventure", 
+  "Cultural", 
+  "Nature & Wildlife", 
+  "Wellness & Spa", 
+  "Historical", 
+  "Culinary", 
+  "Luxury", 
+  "Beach Holidays", 
+  "Spiritual Journeys",
+  "Photography Tours",
+  "Eco Tours",
+  "Family Friendly",
+  "Romantic Getaways",
+  "Educational Tours",
+  "Art & Craft Tours"
+];
 const durationUnits = ["Days", "Weeks", "Months"];
 const difficultyLevels = ["Easy", "Moderate", "Challenging"];
 
 const availableActivities = ["Hiking", "Snorkeling", "City Tour", "Cooking Class", "Museum Visit", "Wildlife Safari", "Cultural Show", "Yoga Session", "Kayaking", "Surfing", "Temple Visit", "Tea Plantation Tour"];
-const availableDestinations = ["Kandy", "Ella", "Galle", "Sigiriya", "Nuwara Eliya", "Mirissa", "Yala National Park", "Anuradhapura", "Polonnaruwa", "Dambulla"];
 
 export default function AddNewTour({ onClose }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,6 +70,11 @@ export default function AddNewTour({ onClose }) {
   const [difficulty, setDifficulty] = useState(difficultyLevels[0]);
   const [region, setRegion] = useState('');
   const [selectedActivities, setSelectedActivities] = useState([]);
+  const [selectedActivity, setSelectedActivity] = useState('');
+  
+  // API Data
+  const [availableActivitiesFromAPI, setAvailableActivitiesFromAPI] = useState([]);
+  const [availablePlacesFromAPI, setAvailablePlacesFromAPI] = useState([]);
   // Itinerary
   const [itineraryDays, setItineraryDays] = useState([]);
   const [expandedAccordionItem, setExpandedAccordionItem] = useState(null);
@@ -82,6 +101,60 @@ export default function AddNewTour({ onClose }) {
   const { getAuthHeaders } = useAuth();
   const API_BASE = 'http://localhost:8080';
   const TOURS_API = `${API_BASE}/api/tours`;
+  const ACTIVITY_API = `${API_BASE}/api/activities`;
+  const PLACE_API = `${API_BASE}/api/places`;
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const res = await fetch(`${ACTIVITY_API}/getAllActivity`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Fetched activities from API:', data); // Debug log
+          if (data && data.length > 0) {
+            setAvailableActivitiesFromAPI(data);
+          }
+        } else {
+          console.warn('API request failed with status:', res.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch activities:', err);
+        // Keep dropdown empty if API fails
+      }
+    };
+
+    const fetchPlaces = async () => {
+      try {
+        const res = await fetch(`${PLACE_API}/getAllPlace`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Fetched places from API:', data); // Debug log
+          if (data && data.length > 0) {
+            setAvailablePlacesFromAPI(data);
+          }
+        } else {
+          console.warn('Places API request failed with status:', res.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch places:', err);
+        // Keep dropdown empty if API fails
+      }
+    };
+
+    if (getAuthHeaders) {
+      fetchActivities();
+      fetchPlaces();
+    }
+  }, [getAuthHeaders]);
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -138,15 +211,46 @@ export default function AddNewTour({ onClose }) {
     );
   };
 
-  const handleItineraryDayDestinationToggle = (dayId, destination) => {
+  const handleActivityDropdownChange = (e) => {
+    const activityName = e.target.value;
+    setSelectedActivity(activityName); // Update the dropdown value
+    if (activityName && !selectedActivities.includes(activityName)) {
+      setSelectedActivities(prev => [...prev, activityName]);
+      setSelectedActivity(''); // Reset dropdown after adding
+    }
+  };
+
+  const handleRemoveActivity = (activityToRemove) => {
+    setSelectedActivities(prev => prev.filter(a => a !== activityToRemove));
+  };
+
+  const handlePlaceDropdownChange = (e, dayId) => {
+    const placeName = e.target.value;
+    if (placeName) {
+      setItineraryDays(prevDays =>
+        prevDays.map(day =>
+          day.id === dayId
+            ? {
+                ...day,
+                selectedDestinations: day.selectedDestinations.includes(placeName)
+                  ? day.selectedDestinations
+                  : [...day.selectedDestinations, placeName]
+              }
+            : day
+        )
+      );
+      // Reset dropdown
+      e.target.value = '';
+    }
+  };
+
+  const handleRemovePlace = (dayId, placeToRemove) => {
     setItineraryDays(prevDays =>
       prevDays.map(day =>
         day.id === dayId
           ? {
               ...day,
-              selectedDestinations: day.selectedDestinations.includes(destination)
-                ? day.selectedDestinations.filter(d => d !== destination)
-                : [...day.selectedDestinations, destination],
+              selectedDestinations: day.selectedDestinations.filter(d => d !== placeToRemove)
             }
           : day
       )
@@ -417,32 +521,66 @@ export default function AddNewTour({ onClose }) {
   };
 
   const handlePublish = async () => {
+    // Debug log individual state values
+    console.log('Publishing tour with values:', {
+      tourName,
+      tourCategory,
+      durationValue,
+      durationUnit,
+      difficulty,
+      region,
+      selectedActivities,
+    });
+
     const tourData = {
       name: tourName,
       category: tourCategory,
-      duration: { value: durationValue, unit: durationUnit },
+      durationValue: parseInt(durationValue),
+      durationUnit: durationUnit.toUpperCase(),
       shortDescription,
       highlights: highlights.filter(h => h.trim()),
       difficulty,
       region,
       activities: selectedActivities,
-      itineraryDays,
-      accommodations,
-      pricing: {
-        pricePerPerson,
-        availableSpots,
-      },
-      availabilityRanges,
-      images: uploadedImages.map(img => img.preview),
+      availableSpots: parseInt(availableSpots),
+      status: "INCOMPLETE",
+      isCustom: false,
+      itineraryDays: itineraryDays.map((day, index) => ({
+        dayNumber: index + 1,
+        title: day.title,
+        description: day.description,
+        imageUrl: day.imagePreview === 'https://placehold.co/600x400.png' ? null : day.imagePreview,
+        destinations: day.selectedDestinations
+      })),
+      accommodations: accommodations.map(acc => ({
+        title: acc.title,
+        description: acc.description,
+        images: acc.images || []
+      })),
+      price: parseFloat(pricePerPerson) || 0.00,
+      availabilityRanges: availabilityRanges.map(range => ({
+        startDate: range.startDate,
+        endDate: range.endDate
+      })),
+      images: uploadedImages.map(img => ({
+        url: img.preview,
+        isPrimary: img.isPrimary || false
+      }))
     };
+
+    console.log('Final tourData:', tourData);
 
     try {
       const res = await fetch(TOURS_API, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(tourData),
       });
       if (res.status === 403) {
+        console.log(tourData);
         alert('You are not authorized to publish tours.');
         return;
       }
@@ -483,7 +621,7 @@ export default function AddNewTour({ onClose }) {
         accommodationNames: accommodations.map(acc => acc.title)
       },
       pricing: {
-        pricePerPerson: pricePerPerson ? `$${pricePerPerson}` : 'Not set',
+        price: pricePerPerson ? `$${pricePerPerson}` : 'Not set',
         availableSpots: availableSpots || 'Not set'
       },
       availability: {
@@ -587,31 +725,43 @@ export default function AddNewTour({ onClose }) {
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
-                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Tour Category</Label>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Tour Category <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={tourCategory}
-                        onValueChange={setTourCategory}
-                        placeholder="Select category"
-                        options={tourCategories.map(cat => ({ value: cat, label: cat }))}
+                        onChange={(e) => setTourCategory(e.target.value)}
                         className="bg-white/80 border-gray-200 focus:border-blue-500"
-                      />
+                      >
+                        <option value="">Select category</option>
+                        {tourCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </Select>
                     </div>
                     <div>
-                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Duration</Label>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Duration <span className="text-red-500">*</span>
+                      </Label>
                       <div className="flex gap-3">
                         <Input
                           type="number"
                           placeholder="8"
                           value={durationValue}
                           onChange={(e) => setDurationValue(e.target.value)}
-                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 text-center font-semibold"
+                          min="1"
+                          step="1"
                         />
                         <Select
                           value={durationUnit}
-                          onValueChange={setDurationUnit}
-                          options={durationUnits.map(unit => ({ value: unit, label: unit }))}
-                          className="w-32 bg-white/80 border-gray-200 focus:border-blue-500"
-                        />
+                          onChange={(e) => setDurationUnit(e.target.value)}
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500"
+                        >
+                          {durationUnits.map(unit => (
+                            <option key={unit} value={unit}>{unit}</option>
+                          ))}
+                        </Select>
                       </div>
                     </div>
                   </div>
@@ -668,59 +818,74 @@ export default function AddNewTour({ onClose }) {
                 {/* Difficulty Level */}
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                   <Label className="text-sm font-bold text-gray-700 block">Difficulty Level</Label>
-                  <RadioGroup value={difficulty} onValueChange={setDifficulty}>
-                    <div className="flex space-x-8">
-                      {difficultyLevels.map(level => (
-                        <div key={level} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
-                          <RadioGroupItem value={level} className="border-2 border-gray-300 data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500" />
-                          <Label className="text-sm text-gray-700 font-medium cursor-pointer">
-                            {level}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </RadioGroup>
+                  <Select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                    className="bg-white/80 border-gray-200 focus:border-blue-500"
+                  >
+                    {difficultyLevels.map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </Select>
                 </div>                {/* Region */}
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold text-gray-700">Region</Label>
                   <Select
                     value={region}
-                    onValueChange={setRegion}
-                    placeholder="Select region"
-                    options={regions.map(reg => ({ value: reg, label: reg }))}
-                  />
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="bg-white/80 border-gray-200 focus:border-blue-500"
+                  >
+                    <option value="">Select region</option>
+                    {regions.map(reg => (
+                      <option key={reg} value={reg}>{reg}</option>
+                    ))}
+                  </Select>
                 </div>
 
                 {/* Activities */}
-                <div className="space-y-4">
-                  <Label className="text-sm font-semibold text-gray-700">Tour Activities</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {availableActivities.map(activity => (
-                      <div key={activity} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={selectedActivities.includes(activity)}
-                          onCheckedChange={() => handleActivityToggle(activity)}
-                        />
-                        <Label className="text-sm text-gray-700 cursor-pointer">
-                          {activity}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedActivities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {selectedActivities.map(activity => (
-                        <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700">
-                          {activity}
-                          <button
-                            type="button"
-                            className="ml-2 hover:text-blue-900"
-                            onClick={() => handleActivityToggle(activity)}
-                          >
-                            <XIcon className="h-3 w-3" />
-                          </button>
-                        </Badge>
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                  <Label className="text-sm font-bold text-gray-700 block">Activities</Label>
+                  
+                  {/* Activity Dropdown */}
+                  <div className="space-y-3">
+                    <Select
+                      value={selectedActivity}
+                      onChange={handleActivityDropdownChange}
+                      className="bg-white/80 border-gray-200 focus:border-blue-500"
+                    >
+                      <option value="">
+                        {availableActivitiesFromAPI.length === 0 ? 'No activities available' : 'Select an activity to add'}
+                      </option>
+                      {availableActivitiesFromAPI.map(activity => (
+                        <option 
+                          key={activity.id || activity.name} 
+                          value={activity.name}
+                          disabled={selectedActivities.includes(activity.name)}
+                        >
+                          {activity.name}
+                        </option>
                       ))}
+                    </Select>
+                  </div>
+
+                  {/* Selected Activities */}
+                  {selectedActivities.length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-700">Selected Activities</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedActivities.map(activity => (
+                          <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700 px-3 py-1">
+                            {activity}
+                            <button
+                              type="button"
+                              className="ml-2 hover:text-blue-900 font-bold"
+                              onClick={() => handleRemoveActivity(activity)}
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -835,34 +1000,47 @@ export default function AddNewTour({ onClose }) {
 
                             {/* Destinations */}
                             <div className="space-y-3">
-                              <Label className="text-sm font-semibold text-gray-700">Destinations for this Day</Label>
-                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                                {availableDestinations.map(dest => (
-                                  <div key={dest} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      checked={day.selectedDestinations.includes(dest)}
-                                      onCheckedChange={() => handleItineraryDayDestinationToggle(day.id, dest)}
-                                    />
-                                    <Label className="text-sm text-gray-700 cursor-pointer">
-                                      {dest}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
-                              {day.selectedDestinations.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                  {day.selectedDestinations.map(dest => (
-                                    <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700">
-                                      {dest}
-                                      <button
-                                        type="button"
-                                        className="ml-2 hover:text-indigo-900"
-                                        onClick={() => handleItineraryDayDestinationToggle(day.id, dest)}
-                                      >
-                                        <XIcon className="h-3 w-3" />
-                                      </button>
-                                    </Badge>
+                              <Label className="text-sm font-semibold text-gray-700">Places</Label>
+                              
+                              {/* Place Dropdown */}
+                              <div className="space-y-3">
+                                <Select
+                                  onChange={(e) => handlePlaceDropdownChange(e, day.id)}
+                                  className="bg-white/80 border-gray-200 focus:border-blue-500"
+                                >
+                                  <option value="">
+                                    {availablePlacesFromAPI.length === 0 ? 'No places available' : 'Select a place to add'}
+                                  </option>
+                                  {availablePlacesFromAPI.map(place => (
+                                    <option 
+                                      key={place.id || place.name} 
+                                      value={place.name}
+                                      disabled={day.selectedDestinations.includes(place.name)}
+                                    >
+                                      {place.name}
+                                    </option>
                                   ))}
+                                </Select>
+                              </div>
+
+                              {/* Selected Places */}
+                              {day.selectedDestinations.length > 0 && (
+                                <div className="space-y-3">
+                                  <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {day.selectedDestinations.map(dest => (
+                                      <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
+                                        {dest}
+                                        <button
+                                          type="button"
+                                          className="ml-2 hover:text-indigo-900 font-bold"
+                                          onClick={() => handleRemovePlace(day.id, dest)}
+                                        >
+                                          <XIcon className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>
