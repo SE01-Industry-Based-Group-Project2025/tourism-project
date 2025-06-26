@@ -69,21 +69,20 @@ export default function Login() {
       setLoading(false);
     }
   };  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated background elements */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Subtle background elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-100/30 to-indigo-100/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-slate-100/30 to-blue-100/20 rounded-full blur-3xl"></div>
       </div>
       
       <div className="relative max-w-md w-full mx-4">
         {/* Main login card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 space-y-8">
+        <div className="bg-white shadow-2xl rounded-2xl border border-gray-200 p-8 space-y-8">
           <div className="text-center">
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl blur opacity-75"></div>
-                <div className="relative p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
+                <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg">
                   {/* Modern lock icon */}
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -94,25 +93,25 @@ export default function Login() {
                 </div>
               </div>
             </div>
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-2">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
               Welcome Back
             </h2>
-            <p className="text-gray-300 font-medium">Sign in to your SLTOURPAL admin account</p>
+            <p className="text-gray-600 font-medium">Sign in to your SLTourPal account</p>
           </div>          {errors.general && (
-            <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm border border-red-400/30 rounded-xl p-4 shadow-lg">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-red-500/30 rounded-lg backdrop-blur-sm">
-                  <svg className="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-1.5 bg-red-100 rounded-lg">
+                  <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-sm text-red-200 font-medium">{errors.general}</p>
+                <p className="text-sm text-red-700 font-medium">{errors.general}</p>
               </div>
             </div>
           )}          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
@@ -123,16 +122,16 @@ export default function Login() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Enter your email"
-                    className={`bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder-gray-400 focus:ring-blue-400 focus:border-blue-400 ${
-                      errors.email ? 'border-red-400 focus:ring-red-400' : ''
+                    className={`bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
                     }`}
                   />
                 </div>
-                {errors.email && <p className="mt-2 text-sm text-red-300">{errors.email}</p>}
+                {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -143,12 +142,12 @@ export default function Login() {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Enter your password"
-                    className={`bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder-gray-400 focus:ring-blue-400 focus:border-blue-400 ${
-                      errors.password ? 'border-red-400 focus:ring-red-400' : ''
+                    className={`bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
                     }`}
                   />
                 </div>
-                {errors.password && <p className="mt-2 text-sm text-red-300">{errors.password}</p>}
+                {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
               </div>
             </div>
 
@@ -158,16 +157,16 @@ export default function Login() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-500 focus:ring-blue-400 border-white/30 rounded bg-white/10 backdrop-blur-sm"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-300">
+                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-700">
                   Remember me
                 </label>
               </div>
               <div className="text-sm">
                 <Link
                   to="/forgot-password"
-                  className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Forgot password?
                 </Link>
@@ -177,7 +176,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="relative w-full overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white py-3 px-4 rounded-lg font-semibold transition duration-200"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -185,10 +184,8 @@ export default function Login() {
                   Signing in...
                 </span>
               ) : (
-                <span className="relative z-10">Sign In</span>
+                'Sign In'
               )}
-              {/* Button glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/50 to-purple-400/50 blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </Button>
 
             <p className="text-center text-sm text-gray-300">
