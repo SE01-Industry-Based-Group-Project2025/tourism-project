@@ -1,5 +1,5 @@
 // src/pages/Tours.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import PageHeader from "../components/ui/PageHeader";
 import StatsCard from "../components/ui/StatsCard";
 import ContentCard from "../components/ui/ContentCard";
@@ -8,68 +8,16 @@ import TourTable from "../components/tours/TourTable";
 import PaginationControls from "../components/tours/PaginationControls";
 import { Button } from "../components/ui/Button";
 import { useNavigate } from "react-router-dom";
-
-// Static tour data
-const toursData = [
-  {
-    id: 1,
-    title: "Cultural Heritage Tour",
-    description: "Explore ancient temples and cultural sites",
-    duration: "7 days",
-    price: "$1,200",
-    status: "active",
-    type: "cultural",
-    rating: 4.8,
-    participants: 25
-  },
-  {
-    id: 2,
-    title: "Beach Paradise Package",
-    description: "Relax on pristine beaches with water sports",
-    duration: "5 days",
-    price: "$850",
-    status: "active",
-    type: "beach",
-    rating: 4.6,
-    participants: 18
-  },
-  {
-    id: 3,
-    title: "Adventure Mountain Trek",
-    description: "Hiking and mountaineering experience",
-    duration: "4 days",
-    price: "$950",
-    status: "inactive",
-    type: "adventure",
-    rating: 4.9,
-    participants: 12
-  },
-  {
-    id: 4,
-    title: "Wildlife Safari Experience",
-    description: "Explore national parks and wildlife",
-    duration: "6 days",
-    price: "$1,100",
-    status: "active",
-    type: "wildlife",
-    rating: 4.7,
-    participants: 20
-  },
-  {
-    id: 5,
-    title: "Tea Country Discovery",
-    description: "Visit tea plantations and processing centers",
-    duration: "3 days",
-    price: "$650",
-    status: "active",
-    type: "cultural",
-    rating: 4.5,
-    participants: 15
-  }
-];
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Tours() {
   const navigate = useNavigate();
+  const { getAuthHeaders } = useAuth();
+  
+  // API state
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Filter & pagination state
   const [searchValue, setSearchValue] = useState("");
@@ -78,18 +26,97 @@ export default function Tours() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  const API_BASE = 'http://localhost:8080';
+  const TOURS_API = `${API_BASE}/api/tours`;
+
+  // API Functions
+  const fetchTours = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(TOURS_API, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Fetched tours:', data);
+        setTours(data);
+      } else {
+        console.error('Failed to fetch tours:', res.status);
+        setError('Failed to fetch tours');
+      }
+    } catch (err) {
+      console.error('Error fetching tours:', err);
+      setError('Error fetching tours');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTour = async (id) => {
+    try {
+      const res = await fetch(`${TOURS_API}/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      
+      if (res.ok) {
+        // Remove the deleted tour from local state
+        setTours(prevTours => prevTours.filter(tour => tour.id !== id));
+        alert('Tour deleted successfully');
+      } else {
+        alert('Failed to delete tour');
+      }
+    } catch (err) {
+      console.error('Error deleting tour:', err);
+      alert('Error deleting tour');
+    }
+  };
+
+  // Fetch tours on component mount
+  useEffect(() => {
+    fetchTours();
+  }, []);
+
+  // Transform backend data to match UI expectations
+  const transformTourData = (tour) => ({
+    id: tour.id,
+    title: tour.name,
+    description: tour.shortDescription,
+    duration: `${tour.durationValue} ${tour.durationUnit.toLowerCase()}`,
+    price: `$${tour.price}`,
+    status: tour.status.toLowerCase(),
+    type: tour.category.toLowerCase(),
+    rating: 4.5, // Default rating since backend doesn't provide this
+    participants: tour.availableSpots
+  });
+
+  // Transform tours data for UI
+  const transformedTours = tours.map(transformTourData);
+
   // Handlers
   const handleView = (id) => {
-    console.log("View", id);
-    // TODO: navigate to `/admin/tours/${id}`
+    console.log("View tour", id);
+    navigate(`/admin/tours/${id}`);
   };
+
   const handleEdit = (id) => {
-    console.log("Edit", id);
-    // TODO: navigate to `/admin/tours/${id}/edit`
+    console.log("Edit tour", id);
+    navigate(`/admin/tours/${id}/edit`);
   };
-  // Filter data
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this tour?')) {
+      await deleteTour(id);
+    }
+  };
+
+  // Filter data - use transformedTours instead of static data
   const filtered = useMemo(() => {
-    return toursData
+    if (loading || !transformedTours.length) return [];
+    
+    return transformedTours
       .filter((t) =>
         t.title.toLowerCase().includes(searchValue.toLowerCase())
       )
@@ -99,13 +126,18 @@ export default function Tours() {
       .filter((t) =>
         typeValue === "all" ? true : t.type === typeValue
       );
-  }, [searchValue, statusValue, typeValue]);
+  }, [transformedTours, searchValue, statusValue, typeValue, loading]);
 
   // Calculate statistics from tours data
-  const activeTours = toursData.filter(tour => tour.status === 'active').length;
-  const totalParticipants = toursData.reduce((sum, tour) => sum + tour.participants, 0);
-  const averageRating = (toursData.reduce((sum, tour) => sum + tour.rating, 0) / toursData.length).toFixed(1);
-  const totalRevenue = toursData.reduce((sum, tour) => sum + parseInt(tour.price.replace('$', '').replace(',', '')), 0);
+  const activeTours = transformedTours.filter(tour => tour.status === 'incomplete' || tour.status === 'ongoing').length;
+  const totalParticipants = transformedTours.reduce((sum, tour) => sum + tour.participants, 0);
+  const averageRating = transformedTours.length > 0 
+    ? (transformedTours.reduce((sum, tour) => sum + tour.rating, 0) / transformedTours.length).toFixed(1)
+    : '0.0';
+  const totalRevenue = transformedTours.reduce((sum, tour) => {
+    const price = parseFloat(tour.price.replace('$', '').replace(',', '')) || 0;
+    return sum + price;
+  }, 0);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = useMemo(() => {
@@ -202,7 +234,30 @@ export default function Tours() {
 
         {/* Tours Table */}
         <ContentCard noPadding>
-          <TourTable tours={paginated} onView={handleView} onEdit={handleEdit} />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-gray-600">Loading tours...</span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="text-red-600 mb-2">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <Button onClick={fetchTours} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <TourTable tours={paginated} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
+          )}
         </ContentCard>        {/* Pagination */}
         <div className="flex justify-center">
           <PaginationControls

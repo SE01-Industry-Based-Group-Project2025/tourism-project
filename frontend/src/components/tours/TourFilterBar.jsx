@@ -44,8 +44,9 @@ export default function TourFilterBar(props) {
             className="w-full md:w-auto pl-16 pr-12 py-4 border-2 border-green-100 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-300 focus:shadow-xl transition-all duration-300 appearance-none cursor-pointer text-gray-900 font-medium hover:shadow-lg"
           >
             <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="incomplete">Incomplete</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
           </select>          <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
             <div className="p-2 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl shadow-sm">
               <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,8 +73,13 @@ export default function TourFilterBar(props) {
             <option value="all">All Types</option>
             <option value="adventure">Adventure</option>
             <option value="cultural">Cultural</option>
-            <option value="beach">Beach</option>
-            <option value="wildlife">Wildlife</option>
+            <option value="nature & wildlife">Nature & Wildlife</option>
+            <option value="wellness & spa">Wellness & Spa</option>
+            <option value="historical">Historical</option>
+            <option value="culinary">Culinary</option>
+            <option value="luxury">Luxury</option>
+            <option value="beach holidays">Beach Holidays</option>
+            <option value="spiritual journeys">Spiritual Journeys</option>
           </select>
           <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
             <div className="p-2 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl shadow-sm">

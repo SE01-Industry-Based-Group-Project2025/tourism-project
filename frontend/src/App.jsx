@@ -10,6 +10,8 @@ import AdminLayout from "./components/layouts/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Tours from "./pages/Tours";
 import AddTour from "./pages/AddTour";
+import TourView from "./pages/TourView";
+import TourEdit from "./pages/TourEdit";
 import Places from "./pages/Places";
 import Users from "./pages/Users";
 import QuoteRequests from "./pages/QuoteRequests";
@@ -116,6 +118,8 @@ export default function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="tours" element={<Tours />} />
         <Route path="tours/new" element={<AddTour />} />
+        <Route path="tours/:id" element={<TourView />} />
+        <Route path="tours/:id/edit" element={<TourEdit />} />
         <Route path="places" element={<Places />} />
         <Route path="users" element={<Users />} />
         <Route path="quote-requests" element={<QuoteRequests />} />

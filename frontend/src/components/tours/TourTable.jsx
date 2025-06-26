@@ -1,9 +1,9 @@
 import React from "react";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "../ui/Table";
 import { Button } from "../ui/Button";
-import { Eye, Edit3} from "lucide-react";
+import { Eye, Edit3, Trash2 } from "lucide-react";
 
-export default function TourTable({ tours, onView, onEdit }) {
+export default function TourTable({ tours, onView, onEdit, onDelete }) {
     return (        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-white/20">
             <Table>
                 <TableHeader className="bg-gradient-to-r from-slate-50/80 to-blue-50/40 backdrop-blur-sm">
@@ -40,6 +40,16 @@ export default function TourTable({ tours, onView, onEdit }) {
                         </TableHead>
                         <TableHead className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                             <div className="flex items-center gap-3">
+                                <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-sm">
+                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span>Price</span>
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <div className="flex items-center gap-3">
                                 <div className="p-2 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-sm">
                                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -65,28 +75,30 @@ export default function TourTable({ tours, onView, onEdit }) {
                            <TableCell className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors duration-300">{tour.title}</TableCell>
                            <TableCell className="text-gray-700 font-medium">{tour.duration}</TableCell>
                             <TableCell className="text-gray-700 font-medium">{tour.participants} spots</TableCell>
+                            <TableCell className="text-gray-700 font-bold text-green-600">{tour.price}</TableCell>
                             <TableCell>
                                 <span
                                     className={`inline-flex px-4 py-2 rounded-full text-xs font-bold shadow-lg transition-all duration-200 ${
-                                        tour.status === "active"
+                                        tour.status === "incomplete" || tour.status === "ongoing"
                                         ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-green-400/25"
-                                        : tour.status === "inactive"
-                                        ? "bg-gradient-to-r from-red-400 to-red-500 text-white shadow-red-400/25"
-                                        : "bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-blue-400/25"
+                                        : tour.status === "completed"
+                                        ? "bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-blue-400/25"
+                                        : "bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-gray-400/25"
                                     }`}
                                 >
                                     {tour.status}
                                 </span>
                             </TableCell>
                             <TableCell className="text-center">
-                                <div className="flex items-center justify-center gap-3">
+                                <div className="flex items-center justify-center gap-2">
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         className="text-blue-600 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-600 border-2 border-blue-200 hover:border-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 rounded-xl font-semibold"
                                         onClick={() => onView(tour.id)}
                                     >
-                                        <Eye className="w-4 h-4 mr-2" />                                        View
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View
                                         <span className="sr-only">View Tour</span>
                                     </Button>
                                     <Button
@@ -98,6 +110,16 @@ export default function TourTable({ tours, onView, onEdit }) {
                                         <Edit3 className="w-4 h-4 mr-2" />
                                         Edit
                                         <span className="sr-only">Edit Tour</span>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-red-600 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 border-2 border-red-200 hover:border-red-500 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 rounded-xl font-semibold"
+                                        onClick={() => onDelete && onDelete(tour.id)}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                        <span className="sr-only">Delete Tour</span>
                                     </Button>
                                 </div>
                             </TableCell>
