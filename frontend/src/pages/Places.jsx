@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import PageHeader from '../components/ui/PageHeader';
 import StatsCard from '../components/ui/StatsCard';
 import ContentCard from '../components/ui/ContentCard';
@@ -112,15 +113,18 @@ const Places = () => {
           method: 'DELETE',
           headers: getAuthHeaders(),
         });
+        toast.success('Destination deleted successfully!');
         await fetchDestinations();
       } else {
         await fetch(`${ACTIVITY_API}/deleteActivity/${item.id}`, {
           method: 'DELETE',
           headers: getAuthHeaders(),
         });
+        toast.success('Activity deleted successfully!');
         await fetchActivities();
       }
     } catch (err) {
+      toast.error('Delete failed!');
       console.error('Delete failed:', err);
     }
     setDeleteTarget(null);
@@ -138,6 +142,7 @@ const Places = () => {
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedItem),
           });
+          toast.success('Destination updated successfully!');
         } else {
           // Add
           await fetch(`${PLACE_API}/addPlace`, {
@@ -145,6 +150,7 @@ const Places = () => {
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedItem),
           });
+          toast.success('Destination added successfully!');
         }
         await fetchDestinations();
       } else {
@@ -155,6 +161,7 @@ const Places = () => {
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedItem),
           });
+          toast.success('Activity updated successfully!');
         } else {
           // Add
           await fetch(`${ACTIVITY_API}/addActivity`, {
@@ -162,10 +169,12 @@ const Places = () => {
             headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedItem),
           });
+          toast.success('Activity added successfully!');
         }
         await fetchActivities();
       }
     } catch (err) {
+      toast.error('Operation failed!');
       console.error('Add/Update failed:', err);
     }
     setShowModal(false);

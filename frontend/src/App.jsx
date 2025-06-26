@@ -4,6 +4,8 @@ import React, { useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useSecurityMonitor } from "./hooks/useSecurityMonitor";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Layouts & Pages
 import AdminLayout from "./components/layouts/AdminLayout";
@@ -87,42 +89,45 @@ export default function App() {
     };
   }, [isAuthenticated]);
   return (
-    <Routes>
-      {/* Public landing page - should be first */}
-      <Route path="/" element={<LandingPage />} />
-      
-      {/* Public auth routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <>
+      <Routes>
+        {/* Public landing page - should be first */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Public auth routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      {/* Tourist (any logged‐in user) */}
+        {/* Tourist (any logged‐in user) */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <TouristDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+        {/* Admin-only routes */}
         <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <TouristDashboard />
+          path="/admin/*"        element={
+            <ProtectedRoute requiredRole="ROLE_ADMIN">
+              <AdminLayout />
             </ProtectedRoute>
-          }
-        />
-
-      {/* Admin-only routes */}
-      <Route
-        path="/admin/*"        element={
-          <ProtectedRoute requiredRole="ROLE_ADMIN">
-            <AdminLayout />
-          </ProtectedRoute>
-        }>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="tours" element={<Tours />} />
-        <Route path="tours/new" element={<AddTour />} />
-        <Route path="places" element={<Places />} />
-        <Route path="users" element={<Users />} />
-        <Route path="quote-requests" element={<QuoteRequests />} />
-        <Route path="reviews" element={<Reviews />} />
-        <Route path="analytics" element={<Analytics />} />
-      </Route>      {/* Fallback: if someone tries anything else */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+          }>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="tours" element={<Tours />} />
+          <Route path="tours/new" element={<AddTour />} />
+          <Route path="places" element={<Places />} />
+          <Route path="users" element={<Users />} />
+          <Route path="quote-requests" element={<QuoteRequests />} />
+          <Route path="reviews" element={<Reviews />} />
+          <Route path="analytics" element={<Analytics />} />
+        </Route>      {/* Fallback: if someone tries anything else */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <ToastContainer />
+    </>
   );
 }
