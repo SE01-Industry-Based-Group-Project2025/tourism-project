@@ -568,7 +568,8 @@ export default function TourEdit() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
                   <option value="INCOMPLETE">Incomplete</option>
-                  <option value="ONGOING">Ongoing</option>
+                  <option value="UPCOMING">Upcoming</option>
+                  <option value="STARTED">Started</option>
                   <option value="COMPLETED">Completed</option>
                 </select>
               </div>

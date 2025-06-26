@@ -45,7 +45,8 @@ export default function TourFilterBar(props) {
           >
             <option value="all">All Status</option>
             <option value="incomplete">Incomplete</option>
-            <option value="ongoing">Ongoing</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="started">Started</option>
             <option value="completed">Completed</option>
           </select>          <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
             <div className="p-2 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl shadow-sm">

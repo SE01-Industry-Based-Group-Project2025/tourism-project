@@ -129,7 +129,7 @@ export default function Tours() {
   }, [transformedTours, searchValue, statusValue, typeValue, loading]);
 
   // Calculate statistics from tours data
-  const activeTours = transformedTours.filter(tour => tour.status === 'incomplete' || tour.status === 'ongoing').length;
+  const activeTours = transformedTours.filter(tour => tour.status === 'incomplete' || tour.status === 'upcoming' || tour.status === 'started').length;
   const totalParticipants = transformedTours.reduce((sum, tour) => sum + tour.participants, 0);
   const averageRating = transformedTours.length > 0 
     ? (transformedTours.reduce((sum, tour) => sum + tour.rating, 0) / transformedTours.length).toFixed(1)
