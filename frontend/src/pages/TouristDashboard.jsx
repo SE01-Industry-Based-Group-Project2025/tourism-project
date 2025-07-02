@@ -2,19 +2,49 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTours } from '../contexts/ToursContext';
 import { useLocation, Link } from 'react-router-dom';
 import { FaPlane, FaMapMarkerAlt, FaCalendarAlt, FaStar, FaHeart, FaUser, FaCog, FaSignOutAlt, FaSearch, FaFilter, FaClock, FaUsers } from 'react-icons/fa';
+import TourDetailsModal from '../components/tours/TourDetailsModal';
 
 export default function TouristDashboard() {
   const { user, logout } = useAuth();
+  const { tours, loading, error, fetchUpcomingTours, searchTours } = useTours();
   const { state } = useLocation();
   const banner = state?.loginMsg;
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('');
+  const [selectedTourId, setSelectedTourId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Mock data for demonstration
+  // Load tours on component mount
+  useEffect(() => {
+    const loadTours = async () => {
+      const result = await fetchUpcomingTours();
+      if (result.success) {
+        console.log('Loaded tours:', result.data);
+        console.log('Tours with Upcoming status:', result.data.filter(tour => 
+          (tour.status || '').toLowerCase() === 'upcoming'
+        ));
+      }
+    };
+    loadTours();
+  }, []);
+
+  // Handle search and filtering
+  useEffect(() => {
+    const filters = {
+      search: searchTerm,
+      category: selectedCategory,
+      duration: selectedDuration
+    };
+    
+    searchTours(filters);
+  }, [searchTerm, selectedCategory, selectedDuration]);
+
+  // Mock data for other sections (will be replaced with API later)
   const [userStats] = useState({
     totalBookings: 5,
     upcomingTrips: 2,
@@ -45,85 +75,42 @@ export default function TouristDashboard() {
     }
   ]);
 
-  const [allTours] = useState([
-    {
-      id: 1,
-      title: "Sigiriya & Dambulla Day Tour",
-      price: 85,
-      rating: 4.8,
-      reviews: 156,
-      duration: "1 Day",
-      category: "Cultural",
-      image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-      highlights: ["Ancient Rock Fortress", "Cave Temples", "Local Lunch"],
-      description: "Explore ancient Sri Lankan heritage sites with expert guides."
-    },
-    {
-      id: 2,
-      title: "Ella Hiking Adventure",
-      price: 120,
-      rating: 4.9,
-      reviews: 203,
-      duration: "2 Days",
-      category: "Adventure",
-      image: "https://images.unsplash.com/photo-1586500036706-41963de24d8b?w=400",
-      highlights: ["Nine Arch Bridge", "Little Adam's Peak", "Tea Plantations"],
-      description: "Mountain hiking and scenic railway experiences in Ella."
-    },
-    {
-      id: 3,
-      title: "Yala Safari Experience",
-      price: 95,
-      rating: 4.7,
-      reviews: 89,
-      duration: "1 Day",
-      category: "Wildlife",
-      image: "https://images.unsplash.com/photo-1549366021-9f761d040a94?w=400",
-      highlights: ["Wildlife Safari", "Leopard Spotting", "Bird Watching"],
-      description: "Ultimate wildlife safari experience in Yala National Park."
-    },
-    {
-      id: 4,
-      title: "Mirissa Beach & Whale Watching",
-      price: 75,
-      rating: 4.6,
-      reviews: 124,
-      duration: "1 Day",
-      category: "Beach",
-      image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400",
-      highlights: ["Whale Watching", "Beach Relaxation", "Fresh Seafood"],
-      description: "Marine life adventure with pristine beach experience."
-    },
-    {
-      id: 5,
-      title: "Kandy Cultural Heritage Tour",
-      price: 65,
-      rating: 4.5,
-      reviews: 98,
-      duration: "1 Day",
-      category: "Cultural",
-      image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400",
-      highlights: ["Temple of Tooth", "Royal Palace", "Cultural Dance"],
-      description: "Immerse in Kandy's rich cultural and religious heritage."
-    }
-  ]);
-
-  // Filter tours based on search criteria
-  const filteredTours = allTours.filter(tour => {
-    const matchesSearch = tour.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tour.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tour.highlights.some(highlight => 
-                           highlight.toLowerCase().includes(searchTerm.toLowerCase())
-                         );
+  // Filter tours based on search criteria (now using API data) - Only show Upcoming tours
+  const filteredTours = tours.filter(tour => {
+    // First check if tour status is "Upcoming" (case-insensitive)
+    const isUpcoming = (tour.status || '').toLowerCase() === 'upcoming';
     
-    const matchesCategory = selectedCategory === '' || tour.category === selectedCategory;
-    const matchesDuration = selectedDuration === '' || tour.duration === selectedDuration;
+    const matchesSearch = searchTerm === '' || 
+      (tour.title || tour.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tour.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tour.highlights || tour.activities || []).some(highlight => 
+        highlight.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     
-    return matchesSearch && matchesCategory && matchesDuration;
+    const matchesCategory = selectedCategory === '' || 
+      (tour.category || tour.tourType || '').toLowerCase() === selectedCategory.toLowerCase();
+    
+    const matchesDuration = selectedDuration === '' || 
+      (tour.duration || '').includes(selectedDuration);
+    
+    // Only return tours that are Upcoming AND match other filters
+    return isUpcoming && matchesSearch && matchesCategory && matchesDuration;
   });
 
-  // Get recommended tours (subset for dashboard)
-  const recommendedTours = allTours.slice(0, 3);
+  // Get recommended tours (subset for dashboard) - Only Upcoming tours
+  const recommendedTours = tours
+    .filter(tour => (tour.status || '').toLowerCase() === 'upcoming')
+    .slice(0, 3);
+
+  const handleTourClick = (tourId) => {
+    setSelectedTourId(tourId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTourId(null);
+  };
 
   const [recentBookings] = useState([
     {
@@ -286,36 +273,45 @@ export default function TouristDashboard() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {recommendedTours.map(tour => (
-            <div key={tour.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition duration-200">
+            <div key={tour.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition duration-200 cursor-pointer"
+                 onClick={() => handleTourClick(tour.id)}>
               <div className="relative">
-                <img src={tour.image} alt={tour.title} className="w-full h-48 object-cover" />
+                <img 
+                  src={tour.imageUrl || tour.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400'} 
+                  alt={tour.title || tour.name} 
+                  className="w-full h-48 object-cover" 
+                />
                 <div className="absolute top-3 right-3">
-                  <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50">
+                  <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50"
+                          onClick={(e) => e.stopPropagation()}>
                     <FaHeart className="text-gray-400 hover:text-red-500" />
                   </button>
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-2 text-lg">{tour.title}</h3>
+                <h3 className="font-semibold text-gray-800 mb-2 text-lg">{tour.title || tour.name}</h3>
                 <div className="flex items-center text-sm text-gray-600 mb-2">
                   <FaStar className="text-yellow-400 mr-1" />
-                  <span>{tour.rating} ({tour.reviews} reviews)</span>
+                  <span>{tour.rating || 4.5} ({tour.reviewCount || tour.reviews || 0} reviews)</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600 mb-3">
                   <FaClock className="mr-1" />
                   <span>{tour.duration}</span>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-3">
-                  {tour.highlights.slice(0, 2).map((highlight, index) => (
+                  {(tour.highlights || tour.activities || []).slice(0, 2).map((highlight, index) => (
                     <span key={index} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
                       {highlight}
                     </span>
                   ))}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-blue-600">${tour.price}</span>
+                  <span className="text-xl font-bold text-blue-600">${tour.price || tour.cost || 0}</span>
                   <button
-                    onClick={() => setActiveTab('tour-details')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTourClick(tour.id);
+                    }}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition duration-200"
                   >
                     View Details
@@ -500,7 +496,15 @@ export default function TouristDashboard() {
   const renderToursContent = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Available Tours</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Available Tours</h2>
+            <p className="text-sm text-gray-600 mt-1">Showing only upcoming tours available for booking</p>
+          </div>
+          <div className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-full">
+            📅 Upcoming Only
+          </div>
+        </div>
         
         {/* Search and Filter */}
         <div className="bg-gray-50 rounded-lg p-6 mb-6">
@@ -612,23 +616,34 @@ export default function TouristDashboard() {
         </div>
 
         {/* Tours Grid */}
-        {filteredTours.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading tours...</span>
+          </div>
+        ) : filteredTours.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTours.map(tour => (
-              <div key={tour.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition duration-200">
+              <div key={tour.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition duration-200 cursor-pointer"
+                   onClick={() => handleTourClick(tour.id)}>
                 <div className="relative">
-                  <img src={tour.image} alt={tour.title} className="w-full h-48 object-cover" />
+                  <img 
+                    src={tour.imageUrl || tour.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400'} 
+                    alt={tour.title || tour.name} 
+                    className="w-full h-48 object-cover" 
+                  />
                   <div className="absolute top-3 right-3">
-                    <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition duration-200">
+                    <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition duration-200"
+                            onClick={(e) => e.stopPropagation()}>
                       <FaHeart className="text-gray-400 hover:text-red-500" />
                     </button>
                   </div>
                   <div className="absolute top-3 left-3">
                     <span className="bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium">
-                      {tour.category}
+                      {tour.category || tour.tourType || 'Tour'}
                     </span>
                   </div>
-                  {tour.rating >= 4.8 && (
+                  {(tour.rating || 4.5) >= 4.8 && (
                     <div className="absolute bottom-3 left-3">
                       <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center">
                         <FaStar className="mr-1" />
@@ -638,32 +653,35 @@ export default function TouristDashboard() {
                   )}
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2 text-lg">{tour.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{tour.description}</p>
+                  <h3 className="font-semibold text-gray-800 mb-2 text-lg">{tour.title || tour.name}</h3>
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{tour.description || 'Experience the best of Sri Lanka with this tour.'}</p>
                   <div className="flex items-center text-sm text-gray-600 mb-2">
                     <FaStar className="text-yellow-400 mr-1" />
-                    <span>{tour.rating} ({tour.reviews} reviews)</span>
+                    <span>{tour.rating || 4.5} ({tour.reviewCount || tour.reviews || 0} reviews)</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600 mb-3">
                     <FaClock className="mr-1" />
                     <span>{tour.duration}</span>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {tour.highlights.slice(0, 2).map((highlight, index) => (
+                    {(tour.highlights || tour.activities || []).slice(0, 2).map((highlight, index) => (
                       <span key={index} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
                         {highlight}
                       </span>
                     ))}
-                    {tour.highlights.length > 2 && (
+                    {(tour.highlights || tour.activities || []).length > 2 && (
                       <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                        +{tour.highlights.length - 2} more
+                        +{(tour.highlights || tour.activities || []).length - 2} more
                       </span>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-blue-600">${tour.price}</span>
+                    <span className="text-xl font-bold text-blue-600">${tour.price || tour.cost || 0}</span>
                     <button
-                      onClick={() => setActiveTab('tour-details')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTourClick(tour.id);
+                      }}
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition duration-200"
                     >
                       Book Now
@@ -676,19 +694,24 @@ export default function TouristDashboard() {
         ) : (
           <div className="text-center py-12">
             <FaSearch className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No tours found</h3>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">
+              {error ? 'Error loading tours' : 'No upcoming tours found'}
+            </h3>
             <p className="text-gray-500 mb-4">
-              Try adjusting your search criteria or browse all available tours
+              {error ? error : 'No upcoming tours match your search criteria. Try adjusting your filters or check back later for new tours.'}
             </p>
             <button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedCategory('');
                 setSelectedDuration('');
+                if (error) {
+                  fetchUpcomingTours();
+                }
               }}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
             >
-              Show All Tours
+              {error ? 'Retry' : 'Show All Upcoming Tours'}
             </button>
           </div>
         )}
@@ -1040,6 +1063,13 @@ export default function TouristDashboard() {
         {activeTab === 'travel-guide' && renderTravelGuideContent()}
         {activeTab === 'profile' && renderProfileContent()}
       </main>
+
+      {/* Tour Details Modal */}
+      <TourDetailsModal
+        tourId={selectedTourId}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
