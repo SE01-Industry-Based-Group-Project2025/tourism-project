@@ -72,7 +72,7 @@ export default function AddNewTour({ onClose }) {
   const [shortDescription, setShortDescription] = useState('');
   const [highlights, setHighlights] = useState(['']);
   const [difficulty, setDifficulty] = useState(difficultyLevels[0]);
-  const [region, setRegion] = useState('');
+  const [selectedRegions, setSelectedRegions] = useState([]);
   const [selectedActivities, setSelectedActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState('');
   
@@ -108,30 +108,53 @@ export default function AddNewTour({ onClose }) {
   const ACTIVITY_API = `${API_BASE}/api/activities`;
   const PLACE_API = `${API_BASE}/api/places`;
 
+  // Helper function to get region from activity or place data
+  const getRegionFromItem = (item) => {
+    return item?.region || item?.location || item?.area || null;
+  };
+
+  // Fetch activities function - moved outside useEffect so it can be called from region handlers
+  const fetchActivities = async (regions = []) => {
+    try {
+      let url = `${ACTIVITY_API}/getAllActivity`;
+      
+      // If regions are selected, use the new endpoint to filter by regions
+      if (regions.length > 0) {
+        // Convert region names to full province names (e.g., "Southern" -> "Southern province")
+        const fullRegionNames = regions.map(region => `${region} province`);
+        console.log('Requesting activities for full region names:', fullRegionNames); // Debug log
+        
+        // Use getByRegion endpoint for both single and multiple regions
+        const regionsParam = fullRegionNames.map(r => `regions=${r}`).join('&');
+        url = `${ACTIVITY_API}/getByRegion?${regionsParam}`;
+      }
+      
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Fetched activities from API:', data); // Debug log
+        console.log('Sample activity structure:', data); // Debug log to see structure
+        if (data && data.length > 0) {
+          setAvailableActivitiesFromAPI(data);
+        } else {
+          setAvailableActivitiesFromAPI([]);
+        }
+      } else {
+        console.warn('API request failed with status:', res.status);
+        setAvailableActivitiesFromAPI([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+      setAvailableActivitiesFromAPI([]);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch(`${ACTIVITY_API}/getAllActivity`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log('Fetched activities from API:', data); // Debug log
-          if (data && data.length > 0) {
-            setAvailableActivitiesFromAPI(data);
-          }
-        } else {
-          console.warn('API request failed with status:', res.status);
-        }
-      } catch (err) {
-        console.error('Failed to fetch activities:', err);
-        // Keep dropdown empty if API fails
-      }
-    };
-
     const fetchPlaces = async () => {
       try {
         const res = await fetch(`${PLACE_API}/getAllPlace`, {
@@ -155,7 +178,7 @@ export default function AddNewTour({ onClose }) {
     };
 
     if (getAuthHeaders) {
-      fetchActivities();
+      fetchActivities(selectedRegions); // Pass current selected regions
       fetchPlaces();
     }
   }, [getAuthHeaders]);
@@ -228,23 +251,79 @@ export default function AddNewTour({ onClose }) {
     setSelectedActivities(prev => prev.filter(a => a !== activityToRemove));
   };
 
+  // Region selection handlers
+  const handleRegionToggle = (region) => {
+    setSelectedRegions(prev => {
+      const newRegions = prev.includes(region)
+        ? prev.filter(r => r !== region)
+        : [...prev, region];
+      
+      console.log('Selected regions changed:', newRegions); // Debug log
+      
+      // Fetch activities for the selected regions
+      if (getAuthHeaders) {
+        fetchActivities(newRegions);
+      }
+      
+      // Clear selected activities when regions change
+      setSelectedActivities([]);
+      
+      return newRegions;
+    });
+  };
+
+  const handleRemoveRegion = (regionToRemove) => {
+    setSelectedRegions(prev => {
+      const newRegions = prev.filter(r => r !== regionToRemove);
+      
+      // Fetch activities for remaining regions
+      if (getAuthHeaders) {
+        fetchActivities(newRegions);
+      }
+      
+      // Clear selected activities when regions change
+      setSelectedActivities([]);
+      
+      return newRegions;
+    });
+  };
+
   const handlePlaceDropdownChange = (e, dayId) => {
     const placeName = e.target.value;
     if (placeName) {
-      setItineraryDays(prevDays =>
-        prevDays.map(day =>
-          day.id === dayId
-            ? {
-                ...day,
-                selectedDestinations: day.selectedDestinations.includes(placeName)
-                  ? day.selectedDestinations
-                  : [...day.selectedDestinations, placeName]
-              }
-            : day
-        )
-      );
-      // Reset dropdown
-      e.target.value = '';
+      // Check if place belongs to selected regions
+      const placeData = availablePlacesFromAPI.find(p => p.name === placeName);
+      console.log('Selected place data:', placeData); // Debug log
+      console.log('Selected regions:', selectedRegions); // Debug log
+      
+      if (placeData) {
+        // Check multiple possible region property names
+        const placeRegion = placeData.region || placeData.location || placeData.area;
+        console.log('Place region:', placeRegion); // Debug log
+        
+        if (placeRegion && selectedRegions.includes(placeRegion)) {
+          setItineraryDays(prevDays =>
+            prevDays.map(day =>
+              day.id === dayId
+                ? {
+                    ...day,
+                    selectedDestinations: day.selectedDestinations.includes(placeName)
+                      ? day.selectedDestinations
+                      : [...day.selectedDestinations, placeName]
+                  }
+                : day
+            )
+          );
+          // Reset dropdown
+          e.target.value = '';
+        } else {
+          alert(`This destination is not available in your selected regions. Place region: ${placeRegion}, Selected regions: ${selectedRegions.join(', ')}`);
+          e.target.value = '';
+        }
+      } else {
+        alert('Place data not found.');
+        e.target.value = '';
+      }
     }
   };
 
@@ -585,7 +664,7 @@ export default function AddNewTour({ onClose }) {
       durationValue,
       durationUnit,
       difficulty,
-      region,
+      selectedRegions,
       selectedActivities,
     });
 
@@ -597,7 +676,7 @@ export default function AddNewTour({ onClose }) {
       shortDescription,
       highlights: highlights.filter(h => h.trim()),
       difficulty,
-      region,
+      regions: selectedRegions,
       activities: selectedActivities,
       availableSpots: parseInt(availableSpots),
       status: "INCOMPLETE",
@@ -720,7 +799,7 @@ export default function AddNewTour({ onClose }) {
         category: tourCategory,
         duration: `${durationValue} ${durationUnit.toLowerCase()}`,
         difficulty: difficulty,
-        region: region,
+        regions: selectedRegions,
         shortDescription: shortDescription,
         highlights: highlights.filter(h => h.trim()),
         activities: selectedActivities
@@ -756,7 +835,7 @@ export default function AddNewTour({ onClose }) {
         primaryImage: uploadedImages.find(img => img.isPrimary)
       },
       completionStatus: {
-        basicInfoComplete: !!(tourName && tourCategory && durationValue && difficulty && region),
+        basicInfoComplete: !!(tourName && tourCategory && durationValue && difficulty && selectedRegions.length > 0),
         pricingComplete: !!(pricePerPerson && availableSpots),
         itineraryComplete: itineraryDays.length > 0,
         accommodationComplete: accommodations.length > 0,
@@ -958,66 +1037,139 @@ export default function AddNewTour({ onClose }) {
                       <option key={level} value={level}>{level}</option>
                     ))}
                   </Select>
-                </div>                {/* Region */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-gray-700">Region</Label>
-                  <Select
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="bg-white/80 border-gray-200 focus:border-blue-500"
-                  >
-                    <option value="">Select region</option>
-                    {regions.map(reg => (
-                      <option key={reg} value={reg}>{reg}</option>
+                </div>                {/* Regions (Multiple Selection) */}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-4 block">
+                    Regions <span className="text-red-500">*</span>
+                  </Label>
+                  <p className="text-xs text-gray-600 mb-4">Select one or more regions where your tour will take place</p>
+                  
+                  {/* Selected Regions Display */}
+                  {selectedRegions.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRegions.map(region => (
+                          <span
+                            key={region}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                          >
+                            {region}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRegion(region)}
+                              className="ml-2 inline-flex items-center justify-center w-4 h-4 text-blue-600 hover:bg-blue-200 hover:text-blue-800 rounded-full transition-colors"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Region Selection Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {regions.map(region => (
+                      <button
+                        key={region}
+                        type="button"
+                        onClick={() => handleRegionToggle(region)}
+                        className={`p-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 ${
+                          selectedRegions.includes(region)
+                            ? 'bg-blue-500 text-white border-blue-500 shadow-lg'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {region}
+                      </button>
                     ))}
-                  </Select>
+                  </div>
+                  
+                  {selectedRegions.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2 italic">Please select at least one region</p>
+                  )}
                 </div>
 
                 {/* Activities */}
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                  <Label className="text-sm font-bold text-gray-700 block">Activities</Label>
-                  
-                  {/* Activity Dropdown */}
-                  <div className="space-y-3">
-                    <Select
-                      value={selectedActivity}
-                      onChange={handleActivityDropdownChange}
-                      className="bg-white/80 border-gray-200 focus:border-blue-500"
-                    >
-                      <option value="">
-                        {availableActivitiesFromAPI.length === 0 ? 'No activities available' : 'Select an activity to add'}
-                      </option>
-                      {availableActivitiesFromAPI.map(activity => (
-                        <option 
-                          key={activity.id || activity.name} 
-                          value={activity.name}
-                          disabled={selectedActivities.includes(activity.name)}
-                        >
-                          {activity.name}
-                        </option>
-                      ))}
-                    </Select>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold text-gray-700 block">Activities</Label>
+                    {selectedRegions.length > 0 && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">
+                        Filtered by: {selectedRegions.join(', ')}
+                      </span>
+                    )}
                   </div>
-
-                  {/* Selected Activities */}
-                  {selectedActivities.length > 0 && (
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700">Selected Activities</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedActivities.map(activity => (
-                          <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700 px-3 py-1">
-                            {activity}
-                            <button
-                              type="button"
-                              className="ml-2 hover:text-blue-900 font-bold"
-                              onClick={() => handleRemoveActivity(activity)}
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
+                  
+                  {selectedRegions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="text-sm font-medium">Please select regions first</p>
+                      <p className="text-xs text-gray-400 mt-1">Activities will be filtered based on your selected regions</p>
                     </div>
+                  ) : (
+                    <>
+                      {/* Activity Dropdown */}
+                      <div className="space-y-3">
+                        <Select
+                          value={selectedActivity}
+                          onChange={handleActivityDropdownChange}
+                          className="bg-white/80 border-gray-200 focus:border-blue-500"
+                        >
+                          <option value="">
+                            {selectedRegions.length === 0 
+                              ? 'Please select regions first' 
+                              : availableActivitiesFromAPI.length === 0 
+                                ? 'No activities available for selected regions' 
+                                : 'Select an activity to add'
+                            }
+                          </option>
+                          {availableActivitiesFromAPI.map(activity => (
+                            <option 
+                              key={activity.id || activity.name} 
+                              value={activity.name}
+                              disabled={selectedActivities.includes(activity.name)}
+                            >
+                              {activity.name} ({activity.region || activity.location || activity.area || 'Unknown region'})
+                            </option>
+                          ))}
+                        </Select>
+                        {selectedRegions.length > 0 && availableActivitiesFromAPI.length === 0 && (
+                          <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                            No activities available for the selected regions. Please contact admin to add activities for: {selectedRegions.join(', ')}
+                          </p>
+                        )}
+                        {selectedRegions.length === 0 && (
+                          <p className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
+                            Please select at least one region above to see available activities.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Selected Activities */}
+                      {selectedActivities.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-semibold text-gray-700">Selected Activities</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedActivities.map(activity => (
+                              <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700 px-3 py-1">
+                                {activity}
+                                <button
+                                  type="button"
+                                  className="ml-2 hover:text-blue-900 font-bold"
+                                  onClick={() => handleRemoveActivity(activity)}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1131,48 +1283,78 @@ export default function AddNewTour({ onClose }) {
 
                             {/* Destinations */}
                             <div className="space-y-3">
-                              <Label className="text-sm font-semibold text-gray-700">Places</Label>
-                              
-                              {/* Place Dropdown */}
-                              <div className="space-y-3">
-                                <Select
-                                  onChange={(e) => handlePlaceDropdownChange(e, day.id)}
-                                  className="bg-white/80 border-gray-200 focus:border-blue-500"
-                                >
-                                  <option value="">
-                                    {availablePlacesFromAPI.length === 0 ? 'No places available' : 'Select a place to add'}
-                                  </option>
-                                  {availablePlacesFromAPI.map(place => (
-                                    <option 
-                                      key={place.id || place.name} 
-                                      value={place.name}
-                                      disabled={day.selectedDestinations.includes(place.name)}
-                                    >
-                                      {place.name}
-                                    </option>
-                                  ))}
-                                </Select>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-sm font-semibold text-gray-700">Places</Label>
+                                {selectedRegions.length > 0 && (
+                                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">
+                                    Filtered by: {selectedRegions.join(', ')}
+                                  </span>
+                                )}
                               </div>
-
-                              {/* Selected Places */}
-                              {day.selectedDestinations.length > 0 && (
-                                <div className="space-y-3">
-                                  <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
-                                  <div className="flex flex-wrap gap-2">
-                                    {day.selectedDestinations.map(dest => (
-                                      <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
-                                        {dest}
-                                        <button
-                                          type="button"
-                                          className="ml-2 hover:text-indigo-900 font-bold"
-                                          onClick={() => handleRemovePlace(day.id, dest)}
-                                        >
-                                          <XIcon className="h-3 w-3" />
-                                        </button>
-                                      </Badge>
-                                    ))}
-                                  </div>
+                              
+                              {selectedRegions.length === 0 ? (
+                                <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
+                                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  <p className="text-sm font-medium">Please select regions first</p>
+                                  <p className="text-xs text-gray-400 mt-1">Go back to Basic Info and select regions to see available places</p>
                                 </div>
+                              ) : (
+                                <>
+                                  {/* Place Dropdown */}
+                                  <div className="space-y-3">
+                                    <Select
+                                      onChange={(e) => handlePlaceDropdownChange(e, day.id)}
+                                      className="bg-white/80 border-gray-200 focus:border-blue-500"
+                                    >
+                                      <option value="">
+                                        {availablePlacesFromAPI.filter(place => selectedRegions.includes(place.region)).length === 0 
+                                          ? 'No places available for selected regions' 
+                                          : 'Select a place to add'
+                                        }
+                                      </option>
+                                      {availablePlacesFromAPI
+                                        .filter(place => selectedRegions.includes(place.region))
+                                        .map(place => (
+                                          <option 
+                                            key={place.id || place.name} 
+                                            value={place.name}
+                                            disabled={day.selectedDestinations.includes(place.name)}
+                                          >
+                                            {place.name} ({place.region})
+                                          </option>
+                                        ))}
+                                    </Select>
+                                    {availablePlacesFromAPI.filter(place => selectedRegions.includes(place.region)).length === 0 && (
+                                      <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                                        No places available for the selected regions. Please contact admin to add places.
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Selected Places */}
+                                  {day.selectedDestinations.length > 0 && (
+                                    <div className="space-y-3">
+                                      <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
+                                      <div className="flex flex-wrap gap-2">
+                                        {day.selectedDestinations.map(dest => (
+                                          <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
+                                            {dest}
+                                            <button
+                                              type="button"
+                                              className="ml-2 hover:text-indigo-900 font-bold"
+                                              onClick={() => handleRemovePlace(day.id, dest)}
+                                            >
+                                              <XIcon className="h-3 w-3" />
+                                            </button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
 

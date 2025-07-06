@@ -20,7 +20,24 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
   const loadTourDetails = async () => {
     const result = await fetchTourById(tourId);
     if (result.success) {
-      setTour(result.data);
+      console.log('Complete tour data:', result.data); // Debug log
+      console.log('Itinerary data:', result.data.itineraryDays); // Debug log
+      
+      // Map the API response to match frontend expectations
+      const mappedTour = {
+        ...result.data,
+        // Map itineraryDays to itinerary with correct structure
+        itinerary: result.data.itineraryDays?.map(day => ({
+          day: day.dayNumber,
+          title: day.title,
+          description: day.description,
+          activities: day.activities || [],
+          meals: day.meals || [],
+          places: day.places || []
+        })) || []
+      };
+      
+      setTour(mappedTour);
     }
   };
 
@@ -185,22 +202,38 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
                           {tour.itinerary.map((day, index) => (
                             <div key={index} className="border border-gray-200 rounded-lg p-4">
                               <h4 className="font-semibold text-gray-800 mb-2">
-                                Day {day.day || index + 1}: {day.title}
+                                Day {day.day}: {day.title}
                               </h4>
                               <p className="text-gray-700 mb-3">{day.description}</p>
-                              {day.activities && (
-                                <div className="space-y-1">
-                                  <h5 className="font-medium text-gray-800">Activities:</h5>
+                              
+                              {/* Places */}
+                              {day.places && day.places.length > 0 && (
+                                <div className="mb-3">
+                                  <h5 className="font-medium text-gray-800">Places to Visit:</h5>
                                   <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                    {day.activities.map((activity, actIndex) => (
-                                      <li key={actIndex}>{activity}</li>
+                                    {day.places.map((place, placeIndex) => (
+                                      <li key={placeIndex}>{place.name || place}</li>
                                     ))}
                                   </ul>
                                 </div>
                               )}
-                              {day.meals && (
-                                <div className="mt-3 text-sm text-gray-600">
-                                  <strong>Meals:</strong> {day.meals.join(', ')}
+                              
+                              {/* Activities */}
+                              {day.activities && day.activities.length > 0 && (
+                                <div className="mb-3">
+                                  <h5 className="font-medium text-gray-800">Activities:</h5>
+                                  <ul className="list-disc list-inside text-gray-600 space-y-1">
+                                    {day.activities.map((activity, actIndex) => (
+                                      <li key={actIndex}>{activity.name || activity}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {/* Meals */}
+                              {day.meals && day.meals.length > 0 && (
+                                <div className="text-sm text-gray-600">
+                                  <strong>Meals:</strong> {day.meals.map(meal => meal.name || meal).join(', ')}
                                 </div>
                               )}
                             </div>
