@@ -291,39 +291,21 @@ export default function AddNewTour({ onClose }) {
   const handlePlaceDropdownChange = (e, dayId) => {
     const placeName = e.target.value;
     if (placeName) {
-      // Check if place belongs to selected regions
-      const placeData = availablePlacesFromAPI.find(p => p.name === placeName);
-      console.log('Selected place data:', placeData); // Debug log
-      console.log('Selected regions:', selectedRegions); // Debug log
-      
-      if (placeData) {
-        // Check multiple possible region property names
-        const placeRegion = placeData.region || placeData.location || placeData.area;
-        console.log('Place region:', placeRegion); // Debug log
-        
-        if (placeRegion && selectedRegions.includes(placeRegion)) {
-          setItineraryDays(prevDays =>
-            prevDays.map(day =>
-              day.id === dayId
-                ? {
-                    ...day,
-                    selectedDestinations: day.selectedDestinations.includes(placeName)
-                      ? day.selectedDestinations
-                      : [...day.selectedDestinations, placeName]
-                  }
-                : day
-            )
-          );
-          // Reset dropdown
-          e.target.value = '';
-        } else {
-          alert(`This destination is not available in your selected regions. Place region: ${placeRegion}, Selected regions: ${selectedRegions.join(', ')}`);
-          e.target.value = '';
-        }
-      } else {
-        alert('Place data not found.');
-        e.target.value = '';
-      }
+      // Add place directly without region validation since we're showing all places
+      setItineraryDays(prevDays =>
+        prevDays.map(day =>
+          day.id === dayId
+            ? {
+                ...day,
+                selectedDestinations: day.selectedDestinations.includes(placeName)
+                  ? day.selectedDestinations
+                  : [...day.selectedDestinations, placeName]
+              }
+            : day
+        )
+      );
+      // Reset dropdown
+      e.target.value = '';
     }
   };
 
@@ -657,6 +639,22 @@ export default function AddNewTour({ onClose }) {
   };
 
   const handlePublish = async () => {
+    // Validate required fields
+    if (selectedRegions.length === 0) {
+      alert('Please select at least one region for your tour.');
+      return;
+    }
+
+    if (!tourName.trim()) {
+      alert('Please provide a tour name.');
+      return;
+    }
+
+    if (!tourCategory) {
+      alert('Please select a tour category.');
+      return;
+    }
+
     // Debug log individual state values
     console.log('Publishing tour with values:', {
       tourName,
@@ -669,31 +667,32 @@ export default function AddNewTour({ onClose }) {
     });
 
     const tourData = {
-      name: tourName,
+      name: tourName.trim(),
       category: tourCategory,
-      durationValue: parseInt(durationValue),
+      durationValue: parseInt(durationValue) || 1,
       durationUnit: durationUnit.toUpperCase(),
-      shortDescription,
-      highlights: highlights.filter(h => h.trim()),
-      difficulty,
-      regions: selectedRegions,
+      shortDescription: shortDescription.trim(),
+      highlights: highlights.filter(h => h.trim()).map(h => h.trim()),
+      difficulty: difficulty,
+      region: selectedRegions.length > 0 ? selectedRegions[0] : '', // Backend expects single region
+      regions: selectedRegions, // Keep regions array for backend
       activities: selectedActivities,
-      availableSpots: parseInt(availableSpots),
-      status: "INCOMPLETE",
+      availableSpots: parseInt(availableSpots) || 1,
+      status: "UPCOMING", // Changed from INCOMPLETE to UPCOMING
       isCustom: false,
       itineraryDays: itineraryDays.map((day, index) => ({
         dayNumber: index + 1,
-        title: day.title,
-        description: day.description,
+        title: day.title.trim(),
+        description: day.description.trim(),
         imageUrl: day.imagePreview === 'https://placehold.co/600x400.png' ? null : day.imagePreview,
         destinations: day.selectedDestinations
       })),
       accommodations: accommodations.map(acc => ({
-        title: acc.title,
-        description: acc.description,
+        title: acc.title.trim(),
+        description: acc.description.trim(),
         images: acc.images || []
       })),
-      price: parseFloat(pricePerPerson) || 0.00,
+      price: parseFloat(pricePerPerson) || 0.0,
       availabilityRanges: availabilityRanges.map(range => ({
         startDate: range.startDate,
         endDate: range.endDate
@@ -704,7 +703,9 @@ export default function AddNewTour({ onClose }) {
       }))
     };
 
-    console.log('Final tourData:', tourData);
+    console.log('Final tourData being sent to backend:', tourData);
+    console.log('Region field specifically:', tourData.region);
+    console.log('Regions array:', tourData.regions);
 
     try {
       const res = await fetch(TOURS_API, {
@@ -715,17 +716,37 @@ export default function AddNewTour({ onClose }) {
         },
         body: JSON.stringify(tourData),
       });
+      
       if (res.status === 403) {
         console.log(tourData);
         alert('You are not authorized to publish tours.');
         return;
       }
-      if (!res.ok) throw new Error('Failed to publish tour');
+      
+      if (!res.ok) {
+        // Get the error details from backend
+        const errorData = await res.text();
+        console.error('Backend error response:', errorData);
+        console.error('Response status:', res.status);
+        console.error('Response headers:', res.headers);
+        
+        try {
+          const errorJson = JSON.parse(errorData);
+          console.error('Parsed error:', errorJson);
+          alert(`Failed to publish tour: ${errorJson.message || errorJson.error || 'Unknown error'}`);
+        } catch {
+          alert(`Failed to publish tour. Status: ${res.status}. Response: ${errorData}`);
+        }
+        return;
+      }
+      
+      const responseData = await res.json();
+      console.log('Success response:', responseData);
       alert('Tour published successfully');
       if (onClose) onClose();
     } catch (err) {
       console.error('Publish tour error', err);
-      alert('Error publishing tour');
+      alert('Error publishing tour: ' + err.message);
     }
   };
 
@@ -1285,76 +1306,59 @@ export default function AddNewTour({ onClose }) {
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <Label className="text-sm font-semibold text-gray-700">Places</Label>
-                                {selectedRegions.length > 0 && (
-                                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">
-                                    Filtered by: {selectedRegions.join(', ')}
-                                  </span>
-                                )}
+                                <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-md font-medium">
+                                  All available places
+                                </span>
                               </div>
                               
-                              {selectedRegions.length === 0 ? (
-                                <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
-                                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  </svg>
-                                  <p className="text-sm font-medium">Please select regions first</p>
-                                  <p className="text-xs text-gray-400 mt-1">Go back to Basic Info and select regions to see available places</p>
-                                </div>
-                              ) : (
-                                <>
-                                  {/* Place Dropdown */}
-                                  <div className="space-y-3">
-                                    <Select
-                                      onChange={(e) => handlePlaceDropdownChange(e, day.id)}
-                                      className="bg-white/80 border-gray-200 focus:border-blue-500"
+                              {/* Place Dropdown */}
+                              <div className="space-y-3">
+                                <Select
+                                  onChange={(e) => handlePlaceDropdownChange(e, day.id)}
+                                  className="bg-white/80 border-gray-200 focus:border-blue-500"
+                                >
+                                  <option value="">
+                                    {availablePlacesFromAPI.length === 0 
+                                      ? 'No places available' 
+                                      : 'Select a place to add'
+                                    }
+                                  </option>
+                                  {availablePlacesFromAPI.map(place => (
+                                    <option 
+                                      key={place.id || place.name} 
+                                      value={place.name}
+                                      disabled={day.selectedDestinations.includes(place.name)}
                                     >
-                                      <option value="">
-                                        {availablePlacesFromAPI.filter(place => selectedRegions.includes(place.region)).length === 0 
-                                          ? 'No places available for selected regions' 
-                                          : 'Select a place to add'
-                                        }
-                                      </option>
-                                      {availablePlacesFromAPI
-                                        .filter(place => selectedRegions.includes(place.region))
-                                        .map(place => (
-                                          <option 
-                                            key={place.id || place.name} 
-                                            value={place.name}
-                                            disabled={day.selectedDestinations.includes(place.name)}
-                                          >
-                                            {place.name} ({place.region})
-                                          </option>
-                                        ))}
-                                    </Select>
-                                    {availablePlacesFromAPI.filter(place => selectedRegions.includes(place.region)).length === 0 && (
-                                      <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
-                                        No places available for the selected regions. Please contact admin to add places.
-                                      </p>
-                                    )}
-                                  </div>
+                                      {place.name} ({place.region || place.location || place.area || 'Unknown region'})
+                                    </option>
+                                  ))}
+                                </Select>
+                                {availablePlacesFromAPI.length === 0 && (
+                                  <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                                    No places available. Please contact admin to add places.
+                                  </p>
+                                )}
+                              </div>
 
-                                  {/* Selected Places */}
-                                  {day.selectedDestinations.length > 0 && (
-                                    <div className="space-y-3">
-                                      <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
-                                      <div className="flex flex-wrap gap-2">
-                                        {day.selectedDestinations.map(dest => (
-                                          <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
-                                            {dest}
-                                            <button
-                                              type="button"
-                                              className="ml-2 hover:text-indigo-900 font-bold"
-                                              onClick={() => handleRemovePlace(day.id, dest)}
-                                            >
-                                              <XIcon className="h-3 w-3" />
-                                            </button>
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </>
+                              {/* Selected Places */}
+                              {day.selectedDestinations.length > 0 && (
+                                <div className="space-y-3">
+                                  <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {day.selectedDestinations.map(dest => (
+                                      <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
+                                        {dest}
+                                        <button
+                                          type="button"
+                                          className="ml-2 hover:text-indigo-900 font-bold"
+                                          onClick={() => handleRemovePlace(day.id, dest)}
+                                        >
+                                          <XIcon className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
 
