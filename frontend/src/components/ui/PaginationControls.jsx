@@ -1,7 +1,20 @@
 // src/components/ui/PaginationControls.jsx
 import React from 'react';
 
-const PaginationControls = ({ currentPage, totalPages, onPrevious, onNext }) => {
+const PaginationControls = ({ currentPage, totalPages, onPrevious, onNext, onPageChange }) => {
+  const handlePageClick = (pageNum) => {
+    if (onPageChange) {
+      onPageChange(pageNum);
+    } else {
+      // Fallback to the old method if onPageChange is not provided
+      if (pageNum < currentPage) {
+        for (let j = 0; j < currentPage - pageNum; j++) onPrevious();
+      } else if (pageNum > currentPage) {
+        for (let j = 0; j < pageNum - currentPage; j++) onNext();
+      }
+    }
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-6">
       <div className="flex justify-between items-center">
@@ -42,13 +55,7 @@ const PaginationControls = ({ currentPage, totalPages, onPrevious, onNext }) => 
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => {
-                      if (pageNum < currentPage) {
-                        for (let j = 0; j < currentPage - pageNum; j++) onPrevious();
-                      } else if (pageNum > currentPage) {
-                        for (let j = 0; j < pageNum - currentPage; j++) onNext();
-                      }
-                    }}
+                    onClick={() => handlePageClick(pageNum)}
                     className={`w-10 h-10 text-sm font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 shadow-sm hover:shadow-md transform hover:scale-110 ${
                       pageNum === currentPage
                         ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'

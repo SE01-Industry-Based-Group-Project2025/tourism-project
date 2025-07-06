@@ -23,7 +23,11 @@ import {
   Calendar, 
   Edit3, 
   ImagePlus,
-  Building2
+  Building2,
+  Info,
+  MapPin,
+  Users,
+  BarChart3
 } from 'lucide-react';
 
 const steps = [
@@ -438,12 +442,53 @@ export default function AddNewTour({ onClose }) {
       return;
     }
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    
     const startDate = new Date(modalStartDate);
     const endDate = new Date(modalEndDate);
+    
+    // Only check for past dates when creating new ranges, not when editing existing ones
+    if (!currentRangeToEditId) {
+      // Check if start date is in the past
+      if (startDate < today) {
+        alert("Start date cannot be in the past. Please select today's date or a future date.");
+        return;
+      }
+      
+      // Check if end date is in the past
+      if (endDate < today) {
+        alert("End date cannot be in the past. Please select today's date or a future date.");
+        return;
+      }
+    }
     
     if (startDate >= endDate) {
       alert("End date must be after start date.");
       return;
+    }
+
+    // Check if the date range duration is reasonable compared to tour duration
+    if (durationValue && durationUnit && !currentRangeToEditId) {
+      const rangeDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      let expectedDays = parseInt(durationValue);
+      
+      switch (durationUnit.toLowerCase()) {
+        case 'weeks':
+          expectedDays *= 7;
+          break;
+        case 'months':
+          expectedDays *= 30; // Approximate
+          break;
+      }
+      
+      // Allow some flexibility (up to 50% more than tour duration)
+      if (rangeDays > expectedDays * 1.5) {
+        const proceed = window.confirm(
+          `The selected date range (${rangeDays} days) is significantly longer than your tour duration (${expectedDays} days). This might confuse customers. Do you want to continue anyway?`
+        );
+        if (!proceed) return;
+      }
     }
 
     if (currentRangeToEditId) {
@@ -460,14 +505,26 @@ export default function AddNewTour({ onClose }) {
         startDate: modalStartDate,
         endDate: modalEndDate,
       };
-      setAvailabilityRanges(prevRanges => [...prevRanges, newRange]);
+      console.log('Adding new availability range:', newRange);
+      setAvailabilityRanges(prevRanges => {
+        const updatedRanges = [...prevRanges, newRange];
+        console.log('Updated availability ranges:', updatedRanges);
+        return updatedRanges;
+      });
     }
     setIsAvailabilityModalOpen(false);
   };
 
   const handleDeleteAvailabilityRange = (rangeId) => {
+    console.log('Deleting availability range with ID:', rangeId);
+    console.log('Current ranges before delete:', availabilityRanges);
+    
     if (window.confirm('Are you sure you want to delete this availability range?')) {
-      setAvailabilityRanges(prevRanges => prevRanges.filter(range => range.id !== rangeId));
+      setAvailabilityRanges(prevRanges => {
+        const filteredRanges = prevRanges.filter(range => range.id !== rangeId);
+        console.log('Ranges after delete:', filteredRanges);
+        return filteredRanges;
+      });
     }
   };
   const formatDateRange = (startDate, endDate) => {
@@ -601,6 +658,61 @@ export default function AddNewTour({ onClose }) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to calculate end date based on start date and tour duration
+  const calculateEndDateFromDuration = (startDate) => {
+    if (!startDate || !durationValue || !durationUnit) return '';
+    
+    const start = new Date(startDate);
+    const duration = parseInt(durationValue);
+    
+    switch (durationUnit.toLowerCase()) {
+      case 'days':
+        // For a N-day tour, add N days to start date
+        // Example: 7-day tour starting July 5 ends July 12 (7 full days from July 5)
+        start.setDate(start.getDate() + duration);
+        break;
+      case 'weeks':
+        // For N weeks, multiply by 7 days
+        start.setDate(start.getDate() + (duration * 7));
+        break;
+      case 'months':
+        // For N months, add the months
+        start.setMonth(start.getMonth() + duration);
+        break;
+      default:
+        start.setDate(start.getDate() + duration);
+    }
+    
+    return start.toISOString().split('T')[0];
+  };
+
+  // Handle start date change with validation and auto-calculate end date
+  const handleStartDateChange = (e) => {
+    const newStartDate = e.target.value;
+    setModalStartDate(newStartDate);
+    
+    // Auto-calculate end date based on tour duration
+    if (newStartDate && durationValue && durationUnit) {
+      const calculatedEndDate = calculateEndDateFromDuration(newStartDate);
+      setModalEndDate(calculatedEndDate);
+    } else if (modalEndDate && newStartDate && new Date(newStartDate) >= new Date(modalEndDate)) {
+      // If no duration set, clear end date if start date is after it
+      setModalEndDate('');
+    }
+  };
+
+  // Handle end date change with validation
+  const handleEndDateChange = (e) => {
+    const newEndDate = e.target.value;
+    setModalEndDate(newEndDate);
+  };
+
   const generateTourSummary = () => {
     return {
       basicInfo: {
@@ -609,28 +721,47 @@ export default function AddNewTour({ onClose }) {
         duration: `${durationValue} ${durationUnit.toLowerCase()}`,
         difficulty: difficulty,
         region: region,
+        shortDescription: shortDescription,
         highlights: highlights.filter(h => h.trim()),
         activities: selectedActivities
       },
       itinerary: {
         totalDays: itineraryDays.length,
-        destinations: [...new Set(itineraryDays.flatMap(day => day.selectedDestinations))]
+        destinations: [...new Set(itineraryDays.flatMap(day => day.selectedDestinations))],
+        completedDays: itineraryDays.filter(day => day.title && day.description && day.selectedDestinations.length > 0).length
       },
       accommodation: {
         totalOptions: accommodations.length,
-        accommodationNames: accommodations.map(acc => acc.title)
+        accommodationNames: accommodations.map(acc => acc.title),
+        completedAccommodations: accommodations.filter(acc => acc.title && acc.description).length
       },
       pricing: {
         price: pricePerPerson ? `$${pricePerPerson}` : 'Not set',
-        availableSpots: availableSpots || 'Not set'
+        pricePerPerson: pricePerPerson,
+        availableSpots: availableSpots || 'Not set',
+        totalRevenue: pricePerPerson && availableSpots ? `$${(parseFloat(pricePerPerson) * parseInt(availableSpots)).toLocaleString()}` : 'Not calculated'
       },
       availability: {
         totalPeriods: availabilityRanges.length,
-        ranges: availabilityRanges.map(range => formatDateRange(range.startDate, range.endDate))
+        ranges: availabilityRanges.map(range => formatDateRange(range.startDate, range.endDate)),
+        totalDays: availabilityRanges.reduce((total, range) => {
+          const start = new Date(range.startDate);
+          const end = new Date(range.endDate);
+          return total + Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        }, 0)
       },
       media: {
         totalImages: uploadedImages.length,
-        hasPrimaryImage: uploadedImages.some(img => img.isPrimary)
+        hasPrimaryImage: uploadedImages.some(img => img.isPrimary),
+        primaryImage: uploadedImages.find(img => img.isPrimary)
+      },
+      completionStatus: {
+        basicInfoComplete: !!(tourName && tourCategory && durationValue && difficulty && region),
+        pricingComplete: !!(pricePerPerson && availableSpots),
+        itineraryComplete: itineraryDays.length > 0,
+        accommodationComplete: accommodations.length > 0,
+        availabilityComplete: availabilityRanges.length > 0,
+        mediaComplete: uploadedImages.length > 0 && uploadedImages.some(img => img.isPrimary)
       }
     };
   };  const ProgressIndicator = () => (
@@ -1490,16 +1621,22 @@ export default function AddNewTour({ onClose }) {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => openEditAvailabilityModal(range)}
-                                  className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 h-8 w-8 p-0 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditAvailabilityModal(range);
+                                  }}
+                                  className="text-gray-500 hover:text-blue-500 hover:bg-blue-50"
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteAvailabilityRange(range.id)}
-                                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAvailabilityRange(range.id);
+                                  }}
+                                  className="text-gray-500 hover:text-red-500 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -1523,6 +1660,13 @@ export default function AddNewTour({ onClose }) {
                         <p className="text-gray-600 mt-2">
                           Set the start and end dates for this availability period
                         </p>
+                        {durationValue && durationUnit && !currentRangeToEditId && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-sm text-blue-700">
+                              <span className="font-semibold">Auto-calculation:</span> End date will be automatically calculated based on your tour duration. You can adjust it manually if needed.
+                            </p>
+                          </div>
+                        )}
                       </DialogHeader>
 
                       <div className="space-y-6">
@@ -1533,9 +1677,16 @@ export default function AddNewTour({ onClose }) {
                           <Input
                             type="date"
                             value={modalStartDate}
-                            onChange={(e) => setModalStartDate(e.target.value)}
+                            onChange={handleStartDateChange}
+                            min={currentRangeToEditId ? undefined : getTodayString()}
                             className="text-base"
                           />
+                          <p className="text-xs text-gray-500">
+                            {currentRangeToEditId 
+                              ? "You can modify the existing date range"
+                              : "Select today's date or any future date"
+                            }
+                          </p>
                         </div>
 
                         <div className="space-y-3">
@@ -1545,15 +1696,31 @@ export default function AddNewTour({ onClose }) {
                           <Input
                             type="date"
                             value={modalEndDate}
-                            onChange={(e) => setModalEndDate(e.target.value)}
+                            onChange={handleEndDateChange}
+                            min={modalStartDate || (currentRangeToEditId ? undefined : getTodayString())}
                             className="text-base"
+                            disabled={!modalStartDate}
                           />
+                          <p className="text-xs text-gray-500">
+                            {modalStartDate 
+                              ? (durationValue && durationUnit && !currentRangeToEditId 
+                                ? `Auto-calculated based on ${durationValue} ${durationUnit.toLowerCase()} duration. You can adjust manually.`
+                                : "End date must be after the start date")
+                              : "Please select a start date first"
+                            }
+                          </p>
                         </div>
 
                         {modalStartDate && modalEndDate && (
                           <div className="p-4 bg-blue-50 rounded-lg">
                             <p className="text-sm font-medium text-blue-900">
-                              Duration: {Math.ceil((new Date(modalEndDate) - new Date(modalStartDate)) / (1000 * 60 * 60 * 24))} days
+                              Duration: {(() => {
+                                const start = new Date(modalStartDate);
+                                const end = new Date(modalEndDate);
+                                const diffTime = end - start;
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                return diffDays > 0 ? `${diffDays} day${diffDays !== 1 ? 's' : ''}` : 'Invalid date range';
+                              })()} 
                             </p>
                           </div>
                         )}
@@ -1703,148 +1870,101 @@ export default function AddNewTour({ onClose }) {
                   )}                </div>
 
                 {/* Tour Summary Preview */}
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div className="border-t border-gray-200 pt-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Tour Summary</h3>
-                    <p className="text-sm text-gray-600 mb-6">Review all the details before publishing your tour</p>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">Tour Summary</h3>
+                        <p className="text-gray-600 mt-1">Review all details before publishing your tour</p>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span className="text-gray-600">Ready to publish</span>
+                      </div>
+                    </div>
                   </div>
 
                   {(() => {
                     const summary = generateTourSummary();
+                    const completionPercentage = Math.round(
+                      (Object.values(summary.completionStatus).filter(Boolean).length / 
+                       Object.values(summary.completionStatus).length) * 100
+                    );
+
                     return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Basic Information Card */}
-                        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg shadow-blue-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                              </div>
-                              Basic Information
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Name:</span>
-                                <p className="text-gray-600">{summary.basicInfo.name || 'Not set'}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Category:</span>
-                                <p className="text-gray-600">{summary.basicInfo.category || 'Not set'}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Duration:</span>
-                                <p className="text-gray-600">{summary.basicInfo.duration}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Difficulty:</span>
-                                <p className="text-gray-600">{summary.basicInfo.difficulty}</p>
-                              </div>
-                            </div>
-                            {summary.basicInfo.highlights.length > 0 && (
-                              <div>
-                                <span className="font-semibold text-gray-700 block mb-1">Highlights:</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {summary.basicInfo.highlights.slice(0, 3).map((highlight, idx) => (
-                                    <Badge key={idx} variant="secondary" className="text-xs">
-                                      {highlight.length > 20 ? `${highlight.slice(0, 20)}...` : highlight}
-                                    </Badge>
-                                  ))}
-                                  {summary.basicInfo.highlights.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      +{summary.basicInfo.highlights.length - 3} more
-                                    </Badge>
-                                  )}
+                      <div className="space-y-8">
+                        {/* Hero Summary Card */}
+                        <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white border-0 shadow-2xl shadow-blue-900/25 rounded-2xl overflow-hidden">
+                          <CardContent className="p-8">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h2 className="text-3xl font-bold mb-2">{summary.basicInfo.name || 'Untitled Tour'}</h2>
+                                <p className="text-blue-100 mb-4 text-lg">{summary.basicInfo.shortDescription || 'No description provided'}</p>
+                                <div className="flex flex-wrap gap-4 text-sm">
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    {summary.basicInfo.duration}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {summary.basicInfo.region || 'No region'}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <DollarSign className="h-4 w-4 mr-2" />
+                                    {summary.pricing.price}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    {summary.pricing.availableSpots} spots
+                                  </div>
                                 </div>
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        {/* Pricing Card */}
-                        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg shadow-green-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-green-100 rounded-lg mr-3">
-                                <DollarSign className="h-5 w-5 text-green-600" />
-                              </div>
-                              Pricing & Capacity
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-1 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Price Per Person:</span>
-                                <p className="text-gray-600">{summary.pricing.pricePerPerson}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Available Spots:</span>
-                                <p className="text-gray-600">{summary.pricing.availableSpots}</p>
-                              </div>
+                              {summary.media.primaryImage && (
+                                <div className="w-24 h-24 rounded-xl overflow-hidden shadow-lg ml-6">
+                                  <img 
+                                    src={summary.media.primaryImage.preview} 
+                                    alt="Tour preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
 
-                        {/* Content Stats Card */}
-                        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg shadow-purple-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                                <ImagePlus className="h-5 w-5 text-purple-600" />
-                              </div>
-                              Content & Media
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Itinerary Days:</span>
-                                <p className="text-gray-600">{summary.itinerary.totalDays}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Accommodations:</span>
-                                <p className="text-gray-600">{summary.accommodation.totalOptions}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Images:</span>
-                                <p className="text-gray-600">{summary.media.totalImages}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Availability:</span>
-                                <p className="text-gray-600">{summary.availability.totalPeriods} periods</p>
-                              </div>
+                        {/* Completion Progress */}
+                        <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-semibold text-gray-900">Completion Progress</h4>
+                              <span className="text-2xl font-bold text-blue-600">{completionPercentage}%</span>
                             </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Readiness Check Card */}
-                        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 shadow-lg shadow-amber-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-amber-100 rounded-lg mr-3">
-                                <XIcon className="h-5 w-5 text-amber-600" />
-                              </div>
-                              Readiness Check
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-2">
+                            <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500" 
+                                style={{ width: `${completionPercentage}%` }}
+                              ></div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                               {[
-                                { check: summary.basicInfo.name, label: 'Tour name' },
-                                { check: summary.pricing.pricePerPerson !== 'Not set', label: 'Price per person set' },
-                                { check: summary.pricing.availableSpots !== 'Not set', label: 'Available spots set' },
-                                { check: summary.itinerary.totalDays > 0, label: 'Itinerary created' },
-                                { check: summary.media.hasPrimaryImage, label: 'Primary image set' },
-                                { check: summary.availability.totalPeriods > 0, label: 'Availability set' }
-                              ].map((item, idx) => (
-                                <div key={idx} className="flex items-center space-x-2 text-sm">
-                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    item.check ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                                { key: 'basicInfoComplete', label: 'Basic Info', icon: '📋' },
+                                { key: 'pricingComplete', label: 'Pricing', icon: '💰' },
+                                { key: 'itineraryComplete', label: 'Itinerary', icon: '🗓️' },
+                                { key: 'accommodationComplete', label: 'Hotels', icon: '🏨' },
+                                { key: 'availabilityComplete', label: 'Availability', icon: '📅' },
+                                { key: 'mediaComplete', label: 'Media', icon: '📸' }
+                              ].map((item) => (
+                                <div key={item.key} className="flex flex-col items-center text-center">
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg mb-2 ${
+                                    summary.completionStatus[item.key] 
+                                      ? 'bg-green-100 text-green-600' 
+                                      : 'bg-gray-100 text-gray-400'
                                   }`}>
-                                    {item.check ? '✓' : '✗'}
+                                    {summary.completionStatus[item.key] ? '✓' : item.icon}
                                   </div>
-                                  <span className={item.check ? 'text-gray-600' : 'text-red-600'}>
+                                  <span className={`text-xs font-medium ${
+                                    summary.completionStatus[item.key] ? 'text-green-600' : 'text-gray-500'
+                                  }`}>
                                     {item.label}
                                   </span>
                                 </div>
@@ -1852,6 +1972,197 @@ export default function AddNewTour({ onClose }) {
                             </div>
                           </CardContent>
                         </Card>
+
+                        {/* Detailed Information Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                          {/* Basic Information Card */}
+                          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                  <Info className="h-5 w-5 text-blue-600" />
+                                </div>
+                                Basic Information
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-6">
+                              <div className="space-y-5">
+                                <div className="flex justify-between items-start py-3">
+                                  <span className="font-semibold text-gray-700">Name:</span>
+                                  <span className="text-gray-600 text-right max-w-[60%] break-words">{summary.basicInfo.name || 'Not set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Category:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.category || 'Not set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Duration:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.duration}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Difficulty:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.difficulty}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Region:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.region || 'Not set'}</span>
+                                </div>
+                              </div>
+                              {summary.basicInfo.highlights.length > 0 && (
+                                <div className="pt-5 border-t border-blue-200">
+                                  <span className="font-semibold text-gray-700 block mb-4">Highlights ({summary.basicInfo.highlights.length}):</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.basicInfo.highlights.slice(0, 3).map((highlight, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5">
+                                        {highlight.length > 15 ? `${highlight.slice(0, 15)}...` : highlight}
+                                      </Badge>
+                                    ))}
+                                    {summary.basicInfo.highlights.length > 3 && (
+                                      <Badge variant="secondary" className="text-xs bg-blue-200 text-blue-800 px-3 py-1.5">
+                                        +{summary.basicInfo.highlights.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {summary.basicInfo.activities.length > 0 && (
+                                <div className="pt-5 border-t border-blue-200">
+                                  <span className="font-semibold text-gray-700 block mb-4">Activities ({summary.basicInfo.activities.length}):</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.basicInfo.activities.slice(0, 2).map((activity, idx) => (
+                                      <Badge key={idx} variant="outline" className="text-xs border-blue-300 text-blue-700 px-3 py-1.5">
+                                        {activity.length > 12 ? `${activity.slice(0, 12)}...` : activity}
+                                      </Badge>
+                                    ))}
+                                    {summary.basicInfo.activities.length > 2 && (
+                                      <Badge variant="outline" className="text-xs border-blue-400 text-blue-800 px-3 py-1.5">
+                                        +{summary.basicInfo.activities.length - 2} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Pricing & Revenue Card */}
+                          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                                  <DollarSign className="h-5 w-5 text-green-600" />
+                                </div>
+                                Pricing & Revenue
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-5">
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-center py-2">
+                                  <span className="font-semibold text-gray-700">Price Per Person:</span>
+                                  <span className="text-gray-600 font-bold">{summary.pricing.price}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-2">
+                                  <span className="font-semibold text-gray-700">Available Spots:</span>
+                                  <span className="text-gray-600">{summary.pricing.availableSpots}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3 border-t border-green-200">
+                                  <span className="font-semibold text-gray-700">Max Revenue:</span>
+                                  <span className="text-green-600 font-bold text-lg">{summary.pricing.totalRevenue}</span>
+                                </div>
+                              </div>
+                              {summary.availability.totalPeriods > 0 && (
+                                <div className="pt-4 border-t border-green-200">
+                                  <span className="font-semibold text-gray-700 block mb-3">Availability:</span>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between text-sm py-2">
+                                      <span>Booking Periods:</span>
+                                      <span className="font-medium">{summary.availability.totalPeriods}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm py-2">
+                                      <span>Total Available Days:</span>
+                                      <span className="font-medium">{summary.availability.totalDays}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Content Statistics Card */}
+                          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                                  <BarChart3 className="h-5 w-5 text-purple-600" />
+                                </div>
+                                Content Statistics
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-5">
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Itinerary Days:</span>
+                                  <span className="text-gray-600">{summary.itinerary.totalDays}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Destinations:</span>
+                                  <span className="text-gray-600">{summary.itinerary.destinations.length}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Accommodations:</span>
+                                  <span className="text-gray-600">{summary.accommodation.totalOptions}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Images:</span>
+                                  <span className="text-gray-600">{summary.media.totalImages}</span>
+                                </div>
+                              </div>
+                              {summary.itinerary.destinations.length > 0 && (
+                                <div className="pt-4 border-t border-purple-200">
+                                  <span className="font-semibold text-gray-700 block mb-3">Top Destinations:</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.itinerary.destinations.slice(0, 3).map((dest, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs bg-purple-100 text-purple-700 px-2 py-1">
+                                        {dest.length > 12 ? `${dest.slice(0, 12)}...` : dest}
+                                      </Badge>
+                                    ))}
+                                    {summary.itinerary.destinations.length > 3 && (
+                                      <Badge variant="secondary" className="text-xs bg-purple-200 text-purple-800 px-2 py-1">
+                                        +{summary.itinerary.destinations.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Availability Schedule */}
+                        {summary.availability.ranges.length > 0 && (
+                          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-amber-100 rounded-lg mr-3">
+                                  <Calendar className="h-5 w-5 text-amber-600" />
+                                </div>
+                                Availability Schedule
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {summary.availability.ranges.map((range, idx) => (
+                                  <div key={idx} className="bg-white/60 rounded-lg p-4 border border-amber-200">
+                                    <div className="flex items-center text-sm">
+                                      <Calendar className="h-4 w-4 text-amber-600 mr-2" />
+                                      <span className="font-medium text-gray-700">{range}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     );
                   })()}

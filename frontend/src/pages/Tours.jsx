@@ -5,7 +5,7 @@ import StatsCard from "../components/ui/StatsCard";
 import ContentCard from "../components/ui/ContentCard";
 import TourFilterBar from "../components/tours/TourFilterBar";
 import TourTable from "../components/tours/TourTable";
-import PaginationControls from "../components/tours/PaginationControls";
+import PaginationControls from "../components/ui/PaginationControls";
 import { Button } from "../components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -117,6 +117,19 @@ export default function Tours() {
     if (loading || !transformedTours.length) return [];
     
     return transformedTours
+      .sort((a, b) => {
+        // Try to sort by creation date/time if available, otherwise fall back to ID
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        } else if (a.dateCreated && b.dateCreated) {
+          return new Date(b.dateCreated) - new Date(a.dateCreated);
+        } else if (a.created_at && b.created_at) {
+          return new Date(b.created_at) - new Date(a.created_at);
+        } else {
+          // Fall back to ID sorting (most recent ID first)
+          return b.id - a.id;
+        }
+      })
       .filter((t) =>
         t.title.toLowerCase().includes(searchValue.toLowerCase())
       )
@@ -263,9 +276,11 @@ export default function Tours() {
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
-            onPrevious={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            onNext={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-          />        </div>
+            onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
     </div>
   );
