@@ -17,34 +17,98 @@ export const ToursProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // API base URLs - using proxy for development
-  const API_BASE = '/api';
+  // API base URLs - try proxy first, fallback to direct localhost
+  const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8080/api' : '/api';
   const TOURS_API = `${API_BASE}/tours`;
 
   // Fetch all upcoming tours
-  const fetchUpcomingTours = async () => {
+  const fetchUpcomingTours = async (retryCount = 0) => {
     setLoading(true);
     setError(null);
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
       const response = await fetch(`${TOURS_API}?status=Upcoming`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Accept': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` })
-        }
+        },
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+      console.log('Tours API response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Tours API error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      setTours(Array.isArray(data) ? data : data.tours || []);
-      return { success: true, data: Array.isArray(data) ? data : data.tours || [] };
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Tours API data:', data);
+        const toursArray = Array.isArray(data) ? data : data.tours || [];
+        setTours(toursArray);
+        return { success: true, data: toursArray };
+      } else {
+        // Get response as text to debug
+        const responseText = await response.text();
+        console.log('Non-JSON response from tours API:', responseText);
+        
+        if (!responseText.trim()) {
+          console.log('Empty response from tours API');
+          setTours([]);
+          return { success: true, data: [] };
+        }
+
+        try {
+          const data = JSON.parse(responseText);
+          console.log('Parsed tours data:', data);
+          const toursArray = Array.isArray(data) ? data : data.tours || [];
+          setTours(toursArray);
+          return { success: true, data: toursArray };
+        } catch (parseError) {
+          console.error('JSON parse error in tours:', parseError);
+          console.error('Response was:', responseText);
+          throw new Error('Invalid JSON response from tours API');
+        }
+      }
     } catch (err) {
       console.error('Error fetching tours:', err);
-      setError(err.message);
-      return { success: false, error: err.message };
+      
+      // Handle specific error types with retry logic
+      if (err.name === 'AbortError') {
+        const errorMsg = 'Request timed out. The server may be slow or unavailable.';
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
+      } else if (err.message.includes('ERR_INCOMPLETE_CHUNKED_ENCODING') || 
+                 err.message.includes('Failed to fetch') ||
+                 err.message.includes('NetworkError')) {
+        console.error('Network/encoding error:', err.message);
+        
+        // Retry up to 3 times with exponential backoff
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying tours request in ${delay}ms (${retryCount + 1}/3)...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return fetchUpcomingTours(retryCount + 1);
+        } else {
+          const errorMsg = 'Unable to connect to server after multiple attempts. Please check your connection and try again.';
+          setError(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+      } else {
+        setError(err.message);
+        return { success: false, error: err.message };
+      }
     } finally {
       setLoading(false);
     }

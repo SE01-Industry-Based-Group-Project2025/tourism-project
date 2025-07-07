@@ -30,25 +30,76 @@ export default function Tours() {
   const TOURS_API = `${API_BASE}/api/tours`;
 
   // API Functions
-  const fetchTours = async () => {
+  const fetchTours = async (retryCount = 0) => {
     try {
       setLoading(true);
+      setError('');
+      
+      console.log('Fetching tours from:', TOURS_API, `(attempt ${retryCount + 1})`);
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
       const res = await fetch(TOURS_API, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders(),
+          'Cache-Control': 'no-cache',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
+      
+      console.log('Response status:', res.status);
+      
       if (res.ok) {
-        const data = await res.json();
-        console.log('Fetched tours:', data);
-        setTours(data);
+        // Check content type
+        const contentType = res.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          console.log('Tours data received:', data);
+          setTours(Array.isArray(data) ? data : []);
+          setError(''); // Clear any previous errors
+        } else {
+          // If not JSON, get as text to see what we're receiving
+          const responseText = await res.text();
+          console.error('Non-JSON response:', responseText.substring(0, 200));
+          setError('Server returned invalid data format');
+        }
       } else {
-        console.error('Failed to fetch tours:', res.status);
-        setError('Failed to fetch tours');
+        const errorText = await res.text();
+        console.error('Failed to fetch tours. Status:', res.status, 'Response:', errorText);
+        setError(`Failed to fetch tours (${res.status}): ${errorText}`);
       }
     } catch (err) {
       console.error('Error fetching tours:', err);
-      setError('Error fetching tours');
+      
+      // Handle specific error types with retry logic
+      if (err.name === 'AbortError') {
+        console.error('Request timed out');
+        setError('Request timed out. The server may be slow or unavailable.');
+      } else if (err.message.includes('ERR_INCOMPLETE_CHUNKED_ENCODING') || 
+                 err.message.includes('Failed to fetch') ||
+                 err.message.includes('NetworkError')) {
+        console.error('Network/encoding error:', err.message);
+        
+        // Retry up to 3 times with exponential backoff
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying request in ${delay}ms (${retryCount + 1}/3)...`);
+          setTimeout(() => fetchTours(retryCount + 1), delay);
+          return;
+        } else {
+          setError('Unable to connect to server after multiple attempts. Please check your connection and try again.');
+        }
+      } else {
+        setError(`Network error: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }

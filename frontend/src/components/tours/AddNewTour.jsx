@@ -61,7 +61,20 @@ const difficultyLevels = ["Easy", "Moderate", "Challenging"];
 
 const availableActivities = ["Hiking", "Snorkeling", "City Tour", "Cooking Class", "Museum Visit", "Wildlife Safari", "Cultural Show", "Yoga Session", "Kayaking", "Surfing", "Temple Visit", "Tea Plantation Tour"];
 
-export default function AddNewTour({ onClose }) {
+export default function AddNewTour({ onClose, mode = 'admin' }) {
+  const steps = mode === 'tourist' 
+    ? [
+        { id: 1, name: 'Basic Info' },
+        { id: 2, name: 'Request Details' },
+      ]
+    : [
+        { id: 1, name: 'Basic Info' },
+        { id: 2, name: 'Itinerary' },
+        { id: 3, name: 'Accommodation' },
+        { id: 4, name: 'Pricing & Availability' },
+        { id: 5, name: 'Media & Summary' },
+      ];
+
   const [currentStep, setCurrentStep] = useState(1);
   
   // Basic Info
@@ -101,6 +114,12 @@ export default function AddNewTour({ onClose }) {
   const [modalEndDate, setModalEndDate] = useState('');
   // Media & Summary
   const [uploadedImages, setUploadedImages] = useState([]);
+
+  // Tourist-specific state variables
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [groupSize, setGroupSize] = useState('');
+  const [specialRequirements, setSpecialRequirements] = useState('');
 
   const { getAuthHeaders } = useAuth();
   const API_BASE = 'http://localhost:8080';
@@ -155,6 +174,21 @@ export default function AddNewTour({ onClose }) {
 
   // Fetch data on component mount
   useEffect(() => {
+    // Set default category for tourist mode
+    if (mode === 'tourist' && !tourCategory) {
+      setTourCategory('Custom Request');
+    }
+
+    // Set default dates for tourist mode (today and tomorrow)
+    if (mode === 'tourist' && !startDate && !endDate) {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      
+      setStartDate(today.toISOString().split('T')[0]);
+      setEndDate(tomorrow.toISOString().split('T')[0]);
+    }
+
     const fetchPlaces = async () => {
       try {
         const res = await fetch(`${PLACE_API}/getAllPlace`, {
@@ -181,7 +215,7 @@ export default function AddNewTour({ onClose }) {
       fetchActivities(selectedRegions); // Pass current selected regions
       fetchPlaces();
     }
-  }, [getAuthHeaders]);
+  }, [getAuthHeaders, mode]);
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -639,7 +673,7 @@ export default function AddNewTour({ onClose }) {
   };
 
   const handlePublish = async () => {
-    // Validate required fields
+    // Common validation for both modes
     if (selectedRegions.length === 0) {
       alert('Please select at least one region for your tour.');
       return;
@@ -650,6 +684,101 @@ export default function AddNewTour({ onClose }) {
       return;
     }
 
+    // Tourist mode specific validation and submission
+    if (mode === 'tourist') {
+      if (!durationValue || !durationUnit) {
+        alert('Please specify the tour duration.');
+        return;
+      }
+
+      if (selectedActivities.length === 0) {
+        alert('Please select at least one activity.');
+        return;
+      }
+
+      if (!pricePerPerson) {
+        alert('Please provide a price for the tour.');
+        return;
+      }
+
+      if (!groupSize) {
+        alert('Please specify the group size.');
+        return;
+      }
+
+      if (!startDate || !endDate) {
+        alert('Please provide start and end dates for your tour.');
+        return;
+      }
+
+      // Validate dates are not in the past
+      const today = new Date().toISOString().split('T')[0];
+      if (startDate < today) {
+        alert('Start date cannot be in the past. Please select today or a future date.');
+        return;
+      }
+
+      if (endDate < startDate) {
+        alert('End date must be on or after the start date.');
+        return;
+      }
+
+      // Create tourist custom request payload
+      const customRequestData = {
+        name: tourName.trim(),
+        durationValue: parseInt(durationValue) || 1,
+        durationUnit: durationUnit.toLowerCase(),
+        region: selectedRegions.length > 0 ? selectedRegions[0] : '',
+        activities: selectedActivities,
+        price: parseFloat(pricePerPerson) || 0.0,
+        groupSize: parseInt(groupSize) || 1,
+        startDate: startDate,
+        endDate: endDate,
+        specialRequirements: specialRequirements.trim()
+      };
+
+      console.log('Submitting custom tour request:', customRequestData);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/tours/custom-request`, {
+          method: 'POST',
+          headers: {
+            ...getAuthHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(customRequestData),
+        });
+        
+        if (res.status === 403) {
+          alert('You are not authorized to submit tour requests.');
+          return;
+        }
+        
+        if (!res.ok) {
+          const errorData = await res.text();
+          console.error('Backend error response:', errorData);
+          
+          try {
+            const errorJson = JSON.parse(errorData);
+            alert(`Failed to submit tour request: ${errorJson.message || errorJson.error || 'Unknown error'}`);
+          } catch {
+            alert(`Failed to submit tour request. Status: ${res.status}. Response: ${errorData}`);
+          }
+          return;
+        }
+        
+        const responseData = await res.json();
+        console.log('Custom tour request submitted successfully:', responseData);
+        alert('Custom tour request submitted successfully! We will contact you soon.');
+        if (onClose) onClose();
+      } catch (err) {
+        console.error('Submit custom tour request error', err);
+        alert('Error submitting tour request: ' + err.message);
+      }
+      return;
+    }
+
+    // Admin mode validation (existing logic)
     if (!tourCategory) {
       alert('Please select a tour category.');
       return;
@@ -954,22 +1083,24 @@ export default function AddNewTour({ onClose }) {
 
                 {/* Category and Duration */}
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
-                        Tour Category <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={tourCategory}
-                        onChange={(e) => setTourCategory(e.target.value)}
-                        className="bg-white/80 border-gray-200 focus:border-blue-500"
-                      >
-                        <option value="">Select category</option>
-                        {tourCategories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </Select>
-                    </div>
+                  <div className={`grid grid-cols-1 ${mode === 'admin' ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6`}>
+                    {mode === 'admin' && (
+                      <div>
+                        <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                          Tour Category <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={tourCategory}
+                          onChange={(e) => setTourCategory(e.target.value)}
+                          className="bg-white/80 border-gray-200 focus:border-blue-500"
+                        >
+                          <option value="">Select category</option>
+                          {tourCategories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
                     <div>
                       <Label className="text-sm font-bold text-gray-700 mb-3 block">
                         Duration <span className="text-red-500">*</span>
@@ -998,67 +1129,74 @@ export default function AddNewTour({ onClose }) {
                   </div>
                 </div>
 
-                {/* Short Description */}
-                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
-                  <Label className="text-sm font-bold text-gray-700 mb-3 block">Short Description</Label>
-                  <Textarea
-                    rows={3}
-                    placeholder="A brief overview of the tour (max 200 characters)"
-                    value={shortDescription}
-                    onChange={(e) => setShortDescription(e.target.value)}
-                    className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                  <p className="text-xs text-gray-500 mt-2 font-medium">
-                    {shortDescription.length}/200 characters
-                  </p>
-                </div>
-
-                {/* Tour Highlights */}
-                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
-                  <Label className="text-sm font-bold text-gray-700 mb-4 block">Tour Highlights</Label>                  <div className="space-y-3">
-                    {highlights.map((highlight, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <Input
-                          value={highlight}
-                          onChange={(e) => handleHighlightChange(index, e.target.value)}
-                          placeholder={`Highlight ${index + 1}`}
-                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveHighlight(index)}
-                          className="text-gray-500 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 p-2 rounded-xl transition-all duration-300"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                {/* Short Description - Admin Only */}
+                {mode === 'admin' && (
+                  <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <Label className="text-sm font-bold text-gray-700 mb-3 block">Short Description</Label>
+                    <Textarea
+                      rows={3}
+                      placeholder="A brief overview of the tour (max 200 characters)"
+                      value={shortDescription}
+                      onChange={(e) => setShortDescription(e.target.value)}
+                      className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                    />
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      {shortDescription.length}/200 characters
+                    </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddHighlight}
+                )}
+
+                {/* Tour Highlights - Admin Only */}
+                {mode === 'admin' && (
+                  <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <Label className="text-sm font-bold text-gray-700 mb-4 block">Tour Highlights</Label>
+                    <div className="space-y-3">
+                      {highlights.map((highlight, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <Input
+                            value={highlight}
+                            onChange={(e) => handleHighlightChange(index, e.target.value)}
+                            placeholder={`Highlight ${index + 1}`}
+                            className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveHighlight(index)}
+                            className="text-gray-500 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 p-2 rounded-xl transition-all duration-300"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddHighlight}
                     className="mt-4 text-blue-600 border-blue-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-400 transition-all duration-300 rounded-xl"
                   >
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Add Highlight
                   </Button>
-                </div>
+                  </div>
+                )}
 
-                {/* Difficulty Level */}
-                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                  <Label className="text-sm font-bold text-gray-700 block">Difficulty Level</Label>
-                  <Select
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
-                    className="bg-white/80 border-gray-200 focus:border-blue-500"
-                  >
-                    {difficultyLevels.map(level => (
-                      <option key={level} value={level}>{level}</option>
-                    ))}
-                  </Select>
-                </div>                {/* Regions (Multiple Selection) */}
+                {/* Difficulty Level - Admin Only */}
+                {mode === 'admin' && (
+                  <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                    <Label className="text-sm font-bold text-gray-700 block">Difficulty Level</Label>
+                    <Select
+                      value={difficulty}
+                      onChange={(e) => setDifficulty(e.target.value)}
+                      className="bg-white/80 border-gray-200 focus:border-blue-500"
+                    >
+                      {difficultyLevels.map(level => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </Select>
+                  </div>
+                )}                {/* Regions (Multiple Selection) */}
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
                   <Label className="text-sm font-bold text-gray-700 mb-4 block">
                     Regions <span className="text-red-500">*</span>
@@ -1196,8 +1334,8 @@ export default function AddNewTour({ onClose }) {
               </div>
             )}
 
-            {/* Step 2: Itinerary */}
-            {currentStep === 2 && (
+            {/* Step 2: Itinerary (Admin) / Request Details (Tourist) */}
+            {currentStep === 2 && mode === 'admin' && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-4">
                   <h2 className="text-2xl font-bold text-gray-900">Day-by-Day Itinerary</h2>
@@ -1219,7 +1357,8 @@ export default function AddNewTour({ onClose }) {
                   </Button>
                 </div>
 
-                {/* Days List */}                {itineraryDays.length === 0 ? (
+                {/* Days List */}
+                {itineraryDays.length === 0 ? (
                   <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300">
                     <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-600 mb-2">No itinerary days yet</h3>
@@ -1425,8 +1564,100 @@ export default function AddNewTour({ onClose }) {
               </div>
             )}
 
-            {/* Step 3: Accommodation */}
-            {currentStep === 3 && (
+            {/* Step 2: Request Details (Tourist Mode) */}
+            {currentStep === 2 && mode === 'tourist' && (
+              <div className="space-y-8">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Tour Request Details</h2>
+                  <p className="text-gray-600 mt-1">Complete your custom tour request</p>
+                </div>
+
+                {/* Price and Group Size */}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Budget per Person (USD) <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder="1000"
+                        value={pricePerPerson}
+                        onChange={(e) => setPricePerPerson(e.target.value)}
+                        className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Group Size <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder="2"
+                        value={groupSize}
+                        onChange={(e) => setGroupSize(e.target.value)}
+                        className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tour Dates */}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Start Date <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={startDate}
+                        min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                        onChange={(e) => {
+                          const newStartDate = e.target.value;
+                          setStartDate(newStartDate);
+                          // If end date is before new start date, update it
+                          if (endDate && endDate < newStartDate) {
+                            setEndDate(newStartDate);
+                          }
+                        }}
+                        className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        End Date <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={endDate}
+                        min={startDate || new Date().toISOString().split('T')[0]} // Minimum is start date or today
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Special Requirements */}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-3 block">Special Requirements</Label>
+                  <Textarea
+                    rows={4}
+                    placeholder="Tell us about any special requirements, dietary restrictions, accessibility needs, or specific places you'd like to visit..."
+                    value={specialRequirements}
+                    onChange={(e) => setSpecialRequirements(e.target.value)}
+                    className="bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Optional: Any additional information that would help us create the perfect tour for you
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Accommodation - Admin Only */}
+            {currentStep === 3 && mode === 'admin' && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-4">
                   <h2 className="text-2xl font-bold text-gray-900">Accommodation Details</h2>
@@ -1697,8 +1928,8 @@ export default function AddNewTour({ onClose }) {
                     </div>
                   </DialogContent>                </Dialog>
               </div>
-            )}            {/* Step 4: Pricing & Availability */}
-            {currentStep === 4 && (
+            )}            {/* Step 4: Pricing & Availability - Admin Only */}
+            {currentStep === 4 && mode === 'admin' && (
               <div className="space-y-10">
                 <div className="bg-gradient-to-r from-blue-50/80 via-purple-50/60 to-blue-50/80 p-6 rounded-2xl border border-blue-100/50">
                   <div className="flex items-center gap-4">
@@ -1933,8 +2164,8 @@ export default function AddNewTour({ onClose }) {
               </div>
             )}
 
-            {/* Step 5: Media & Summary */}
-            {currentStep === 5 && (
+            {/* Step 5: Media & Summary - Admin Only */}
+            {currentStep === 5 && mode === 'admin' && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-4">
                   <h2 className="text-2xl font-bold text-gray-900">Media & Summary</h2>
@@ -2390,7 +2621,7 @@ export default function AddNewTour({ onClose }) {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Publish Tour
+                  {mode === 'tourist' ? 'Submit Tour Request' : 'Publish Tour'}
                 </Button>
               )}</div>
           </CardContent>

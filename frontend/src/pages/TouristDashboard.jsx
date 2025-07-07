@@ -6,6 +6,7 @@ import { useTours } from '../contexts/ToursContext';
 import { useLocation, Link } from 'react-router-dom';
 import { FaPlane, FaMapMarkerAlt, FaCalendarAlt, FaStar, FaHeart, FaUser, FaCog, FaSignOutAlt, FaSearch, FaFilter, FaClock, FaUsers } from 'react-icons/fa';
 import TourDetailsModal from '../components/tours/TourDetailsModal';
+import AddNewTour from '../components/tours/AddNewTour';
 
 export default function TouristDashboard() {
   const { user, logout } = useAuth();
@@ -740,84 +741,10 @@ export default function TouristDashboard() {
   );
 
   const renderCustomTourContent = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Plan Your Custom Tour</h2>
-        
-        <form className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Preferred Start Date</label>
-              <input
-                type="date"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Duration (Days)</label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>1-2 Days</option>
-                <option>3-5 Days</option>
-                <option>1 Week</option>
-                <option>2 Weeks</option>
-                <option>1 Month+</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Interests (Select all that apply)</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {['Cultural Sites', 'Wildlife Safari', 'Beach Activities', 'Adventure Sports', 'Tea Plantations', 'Local Cuisine', 'Photography', 'Spiritual Tours'].map((interest, index) => (
-                <label key={index} className="flex items-center space-x-2">
-                  <input type="checkbox" className="text-blue-600" />
-                  <span className="text-sm text-gray-700">{interest}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Budget Range (Per Person)</label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>$50 - $100</option>
-                <option>$100 - $200</option>
-                <option>$200 - $500</option>
-                <option>$500+</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Group Size</label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>1-2 People</option>
-                <option>3-5 People</option>
-                <option>6-10 People</option>
-                <option>10+ People</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Special Requirements</label>
-            <textarea
-              rows={4}
-              placeholder="Tell us about any special requirements, dietary restrictions, accessibility needs, or specific places you'd like to visit..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            ></textarea>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-semibold"
-            >
-              Submit Custom Tour Request
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <AddNewTour 
+      mode="tourist" 
+      onClose={() => setActiveTab('dashboard')} 
+    />
   );
 
   const renderTourDetailsContent = () => (
