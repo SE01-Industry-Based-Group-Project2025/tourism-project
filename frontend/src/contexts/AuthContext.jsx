@@ -138,10 +138,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  });
+  const getAuthHeaders = () => {
+    console.log('getAuthHeaders called - token:', token);
+    if (!token) {
+      console.warn('No token available for auth headers');
+      return {
+        'Content-Type': 'application/json',
+      };
+    }
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  };
 
   const isAuthenticated = !!user;
   const isAdmin = user?.roles?.includes('ROLE_ADMIN');

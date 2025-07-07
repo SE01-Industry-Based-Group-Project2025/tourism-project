@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { RadioGroup, RadioGroupItem } from '../ui/RadioGroup';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/Accordion';
@@ -24,7 +23,11 @@ import {
   Calendar, 
   Edit3, 
   ImagePlus,
-  Building2
+  Building2,
+  Info,
+  MapPin,
+  Users,
+  BarChart3
 } from 'lucide-react';
 
 const steps = [
@@ -36,12 +39,27 @@ const steps = [
 ];
 
 const regions = ["Central", "Coastal", "Hill Country", "Northern", "Southern", "Western", "Eastern", "North Central", "North Western", "Uva", "Sabaragamuwa"];
-const tourCategories = ["Adventure", "Cultural", "Nature & Wildlife", "Wellness & Spa", "Historical", "Culinary", "Luxury", "Beach Holidays", "Spiritual Journeys"];
+const tourCategories = [
+  "Adventure", 
+  "Cultural", 
+  "Nature & Wildlife", 
+  "Wellness & Spa", 
+  "Historical", 
+  "Culinary", 
+  "Luxury", 
+  "Beach Holidays", 
+  "Spiritual Journeys",
+  "Photography Tours",
+  "Eco Tours",
+  "Family Friendly",
+  "Romantic Getaways",
+  "Educational Tours",
+  "Art & Craft Tours"
+];
 const durationUnits = ["Days", "Weeks", "Months"];
 const difficultyLevels = ["Easy", "Moderate", "Challenging"];
 
 const availableActivities = ["Hiking", "Snorkeling", "City Tour", "Cooking Class", "Museum Visit", "Wildlife Safari", "Cultural Show", "Yoga Session", "Kayaking", "Surfing", "Temple Visit", "Tea Plantation Tour"];
-const availableDestinations = ["Kandy", "Ella", "Galle", "Sigiriya", "Nuwara Eliya", "Mirissa", "Yala National Park", "Anuradhapura", "Polonnaruwa", "Dambulla"];
 
 export default function AddNewTour({ onClose }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -54,8 +72,13 @@ export default function AddNewTour({ onClose }) {
   const [shortDescription, setShortDescription] = useState('');
   const [highlights, setHighlights] = useState(['']);
   const [difficulty, setDifficulty] = useState(difficultyLevels[0]);
-  const [region, setRegion] = useState('');
+  const [selectedRegions, setSelectedRegions] = useState([]);
   const [selectedActivities, setSelectedActivities] = useState([]);
+  const [selectedActivity, setSelectedActivity] = useState('');
+  
+  // API Data
+  const [availableActivitiesFromAPI, setAvailableActivitiesFromAPI] = useState([]);
+  const [availablePlacesFromAPI, setAvailablePlacesFromAPI] = useState([]);
   // Itinerary
   const [itineraryDays, setItineraryDays] = useState([]);
   const [expandedAccordionItem, setExpandedAccordionItem] = useState(null);
@@ -69,11 +92,8 @@ export default function AddNewTour({ onClose }) {
   const [modalAccImages, setModalAccImages] = useState([]);
 
   // Pricing & Availability
-  const [basePrice12, setBasePrice12] = useState('');
-  const [basePrice35, setBasePrice35] = useState('');
-  const [basePrice6Plus, setBasePrice6Plus] = useState('');
-  const [minGroupSize, setMinGroupSize] = useState('2');
-  const [maxGroupSize, setMaxGroupSize] = useState('12');
+  const [pricePerPerson, setPricePerPerson] = useState('');
+  const [availableSpots, setAvailableSpots] = useState('');
   const [availabilityRanges, setAvailabilityRanges] = useState([]);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [currentRangeToEditId, setCurrentRangeToEditId] = useState(null);
@@ -85,6 +105,83 @@ export default function AddNewTour({ onClose }) {
   const { getAuthHeaders } = useAuth();
   const API_BASE = 'http://localhost:8080';
   const TOURS_API = `${API_BASE}/api/tours`;
+  const ACTIVITY_API = `${API_BASE}/api/activities`;
+  const PLACE_API = `${API_BASE}/api/places`;
+
+  // Helper function to get region from activity or place data
+  const getRegionFromItem = (item) => {
+    return item?.region || item?.location || item?.area || null;
+  };
+
+  // Fetch activities function - moved outside useEffect so it can be called from region handlers
+  const fetchActivities = async (regions = []) => {
+    try {
+      let url = `${ACTIVITY_API}/getAllActivity`;
+      
+      // If regions are selected, use the new endpoint to filter by regions
+      if (regions.length > 0) {
+        // Convert region names to full province names (e.g., "Southern" -> "Southern province")
+        const fullRegionNames = regions.map(region => `${region} province`);
+        console.log('Requesting activities for full region names:', fullRegionNames); // Debug log
+        
+        // Use getByRegion endpoint for both single and multiple regions
+        const regionsParam = fullRegionNames.map(r => `regions=${r}`).join('&');
+        url = `${ACTIVITY_API}/getByRegion?${regionsParam}`;
+      }
+      
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Fetched activities from API:', data); // Debug log
+        console.log('Sample activity structure:', data); // Debug log to see structure
+        if (data && data.length > 0) {
+          setAvailableActivitiesFromAPI(data);
+        } else {
+          setAvailableActivitiesFromAPI([]);
+        }
+      } else {
+        console.warn('API request failed with status:', res.status);
+        setAvailableActivitiesFromAPI([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+      setAvailableActivitiesFromAPI([]);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchPlaces = async () => {
+      try {
+        const res = await fetch(`${PLACE_API}/getAllPlace`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Fetched places from API:', data); // Debug log
+          if (data && data.length > 0) {
+            setAvailablePlacesFromAPI(data);
+          }
+        } else {
+          console.warn('Places API request failed with status:', res.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch places:', err);
+        // Keep dropdown empty if API fails
+      }
+    };
+
+    if (getAuthHeaders) {
+      fetchActivities(selectedRegions); // Pass current selected regions
+      fetchPlaces();
+    }
+  }, [getAuthHeaders]);
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -141,15 +238,84 @@ export default function AddNewTour({ onClose }) {
     );
   };
 
-  const handleItineraryDayDestinationToggle = (dayId, destination) => {
+  const handleActivityDropdownChange = (e) => {
+    const activityName = e.target.value;
+    setSelectedActivity(activityName); // Update the dropdown value
+    if (activityName && !selectedActivities.includes(activityName)) {
+      setSelectedActivities(prev => [...prev, activityName]);
+      setSelectedActivity(''); // Reset dropdown after adding
+    }
+  };
+
+  const handleRemoveActivity = (activityToRemove) => {
+    setSelectedActivities(prev => prev.filter(a => a !== activityToRemove));
+  };
+
+  // Region selection handlers
+  const handleRegionToggle = (region) => {
+    setSelectedRegions(prev => {
+      const newRegions = prev.includes(region)
+        ? prev.filter(r => r !== region)
+        : [...prev, region];
+      
+      console.log('Selected regions changed:', newRegions); // Debug log
+      
+      // Fetch activities for the selected regions
+      if (getAuthHeaders) {
+        fetchActivities(newRegions);
+      }
+      
+      // Clear selected activities when regions change
+      setSelectedActivities([]);
+      
+      return newRegions;
+    });
+  };
+
+  const handleRemoveRegion = (regionToRemove) => {
+    setSelectedRegions(prev => {
+      const newRegions = prev.filter(r => r !== regionToRemove);
+      
+      // Fetch activities for remaining regions
+      if (getAuthHeaders) {
+        fetchActivities(newRegions);
+      }
+      
+      // Clear selected activities when regions change
+      setSelectedActivities([]);
+      
+      return newRegions;
+    });
+  };
+
+  const handlePlaceDropdownChange = (e, dayId) => {
+    const placeName = e.target.value;
+    if (placeName) {
+      // Add place directly without region validation since we're showing all places
+      setItineraryDays(prevDays =>
+        prevDays.map(day =>
+          day.id === dayId
+            ? {
+                ...day,
+                selectedDestinations: day.selectedDestinations.includes(placeName)
+                  ? day.selectedDestinations
+                  : [...day.selectedDestinations, placeName]
+              }
+            : day
+        )
+      );
+      // Reset dropdown
+      e.target.value = '';
+    }
+  };
+
+  const handleRemovePlace = (dayId, placeToRemove) => {
     setItineraryDays(prevDays =>
       prevDays.map(day =>
         day.id === dayId
           ? {
               ...day,
-              selectedDestinations: day.selectedDestinations.includes(destination)
-                ? day.selectedDestinations.filter(d => d !== destination)
-                : [...day.selectedDestinations, destination],
+              selectedDestinations: day.selectedDestinations.filter(d => d !== placeToRemove)
             }
           : day
       )
@@ -337,12 +503,53 @@ export default function AddNewTour({ onClose }) {
       return;
     }
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    
     const startDate = new Date(modalStartDate);
     const endDate = new Date(modalEndDate);
+    
+    // Only check for past dates when creating new ranges, not when editing existing ones
+    if (!currentRangeToEditId) {
+      // Check if start date is in the past
+      if (startDate < today) {
+        alert("Start date cannot be in the past. Please select today's date or a future date.");
+        return;
+      }
+      
+      // Check if end date is in the past
+      if (endDate < today) {
+        alert("End date cannot be in the past. Please select today's date or a future date.");
+        return;
+      }
+    }
     
     if (startDate >= endDate) {
       alert("End date must be after start date.");
       return;
+    }
+
+    // Check if the date range duration is reasonable compared to tour duration
+    if (durationValue && durationUnit && !currentRangeToEditId) {
+      const rangeDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      let expectedDays = parseInt(durationValue);
+      
+      switch (durationUnit.toLowerCase()) {
+        case 'weeks':
+          expectedDays *= 7;
+          break;
+        case 'months':
+          expectedDays *= 30; // Approximate
+          break;
+      }
+      
+      // Allow some flexibility (up to 50% more than tour duration)
+      if (rangeDays > expectedDays * 1.5) {
+        const proceed = window.confirm(
+          `The selected date range (${rangeDays} days) is significantly longer than your tour duration (${expectedDays} days). This might confuse customers. Do you want to continue anyway?`
+        );
+        if (!proceed) return;
+      }
     }
 
     if (currentRangeToEditId) {
@@ -359,14 +566,26 @@ export default function AddNewTour({ onClose }) {
         startDate: modalStartDate,
         endDate: modalEndDate,
       };
-      setAvailabilityRanges(prevRanges => [...prevRanges, newRange]);
+      console.log('Adding new availability range:', newRange);
+      setAvailabilityRanges(prevRanges => {
+        const updatedRanges = [...prevRanges, newRange];
+        console.log('Updated availability ranges:', updatedRanges);
+        return updatedRanges;
+      });
     }
     setIsAvailabilityModalOpen(false);
   };
 
   const handleDeleteAvailabilityRange = (rangeId) => {
+    console.log('Deleting availability range with ID:', rangeId);
+    console.log('Current ranges before delete:', availabilityRanges);
+    
     if (window.confirm('Are you sure you want to delete this availability range?')) {
-      setAvailabilityRanges(prevRanges => prevRanges.filter(range => range.id !== rangeId));
+      setAvailabilityRanges(prevRanges => {
+        const filteredRanges = prevRanges.filter(range => range.id !== rangeId);
+        console.log('Ranges after delete:', filteredRanges);
+        return filteredRanges;
+      });
     }
   };
   const formatDateRange = (startDate, endDate) => {
@@ -420,44 +639,114 @@ export default function AddNewTour({ onClose }) {
   };
 
   const handlePublish = async () => {
-    const tourData = {
-      name: tourName,
-      category: tourCategory,
-      duration: { value: durationValue, unit: durationUnit },
-      shortDescription,
-      highlights: highlights.filter(h => h.trim()),
+    // Validate required fields
+    if (selectedRegions.length === 0) {
+      alert('Please select at least one region for your tour.');
+      return;
+    }
+
+    if (!tourName.trim()) {
+      alert('Please provide a tour name.');
+      return;
+    }
+
+    if (!tourCategory) {
+      alert('Please select a tour category.');
+      return;
+    }
+
+    // Debug log individual state values
+    console.log('Publishing tour with values:', {
+      tourName,
+      tourCategory,
+      durationValue,
+      durationUnit,
       difficulty,
-      region,
+      selectedRegions,
+      selectedActivities,
+    });
+
+    const tourData = {
+      name: tourName.trim(),
+      category: tourCategory,
+      durationValue: parseInt(durationValue) || 1,
+      durationUnit: durationUnit.toUpperCase(),
+      shortDescription: shortDescription.trim(),
+      highlights: highlights.filter(h => h.trim()).map(h => h.trim()),
+      difficulty: difficulty,
+      region: selectedRegions.length > 0 ? selectedRegions[0] : '', // Backend expects single region
+      regions: selectedRegions, // Keep regions array for backend
       activities: selectedActivities,
-      itineraryDays,
-      accommodations,
-      pricing: {
-        basePrice12,
-        basePrice35,
-        basePrice6Plus,
-        minGroupSize,
-        maxGroupSize,
-      },
-      availabilityRanges,
-      images: uploadedImages.map(img => img.preview),
+      availableSpots: parseInt(availableSpots) || 1,
+      status: "UPCOMING", // Changed from INCOMPLETE to UPCOMING
+      isCustom: false,
+      itineraryDays: itineraryDays.map((day, index) => ({
+        dayNumber: index + 1,
+        title: day.title.trim(),
+        description: day.description.trim(),
+        imageUrl: day.imagePreview === 'https://placehold.co/600x400.png' ? null : day.imagePreview,
+        destinations: day.selectedDestinations
+      })),
+      accommodations: accommodations.map(acc => ({
+        title: acc.title.trim(),
+        description: acc.description.trim(),
+        images: acc.images || []
+      })),
+      price: parseFloat(pricePerPerson) || 0.0,
+      availabilityRanges: availabilityRanges.map(range => ({
+        startDate: range.startDate,
+        endDate: range.endDate
+      })),
+      images: uploadedImages.map(img => ({
+        url: img.preview,
+        isPrimary: img.isPrimary || false
+      }))
     };
+
+    console.log('Final tourData being sent to backend:', tourData);
+    console.log('Region field specifically:', tourData.region);
+    console.log('Regions array:', tourData.regions);
 
     try {
       const res = await fetch(TOURS_API, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(tourData),
       });
+      
       if (res.status === 403) {
+        console.log(tourData);
         alert('You are not authorized to publish tours.');
         return;
       }
-      if (!res.ok) throw new Error('Failed to publish tour');
+      
+      if (!res.ok) {
+        // Get the error details from backend
+        const errorData = await res.text();
+        console.error('Backend error response:', errorData);
+        console.error('Response status:', res.status);
+        console.error('Response headers:', res.headers);
+        
+        try {
+          const errorJson = JSON.parse(errorData);
+          console.error('Parsed error:', errorJson);
+          alert(`Failed to publish tour: ${errorJson.message || errorJson.error || 'Unknown error'}`);
+        } catch {
+          alert(`Failed to publish tour. Status: ${res.status}. Response: ${errorData}`);
+        }
+        return;
+      }
+      
+      const responseData = await res.json();
+      console.log('Success response:', responseData);
       alert('Tour published successfully');
       if (onClose) onClose();
     } catch (err) {
       console.error('Publish tour error', err);
-      alert('Error publishing tour');
+      alert('Error publishing tour: ' + err.message);
     }
   };
 
@@ -469,6 +758,61 @@ export default function AddNewTour({ onClose }) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to calculate end date based on start date and tour duration
+  const calculateEndDateFromDuration = (startDate) => {
+    if (!startDate || !durationValue || !durationUnit) return '';
+    
+    const start = new Date(startDate);
+    const duration = parseInt(durationValue);
+    
+    switch (durationUnit.toLowerCase()) {
+      case 'days':
+        // For a N-day tour, add N days to start date
+        // Example: 7-day tour starting July 5 ends July 12 (7 full days from July 5)
+        start.setDate(start.getDate() + duration);
+        break;
+      case 'weeks':
+        // For N weeks, multiply by 7 days
+        start.setDate(start.getDate() + (duration * 7));
+        break;
+      case 'months':
+        // For N months, add the months
+        start.setMonth(start.getMonth() + duration);
+        break;
+      default:
+        start.setDate(start.getDate() + duration);
+    }
+    
+    return start.toISOString().split('T')[0];
+  };
+
+  // Handle start date change with validation and auto-calculate end date
+  const handleStartDateChange = (e) => {
+    const newStartDate = e.target.value;
+    setModalStartDate(newStartDate);
+    
+    // Auto-calculate end date based on tour duration
+    if (newStartDate && durationValue && durationUnit) {
+      const calculatedEndDate = calculateEndDateFromDuration(newStartDate);
+      setModalEndDate(calculatedEndDate);
+    } else if (modalEndDate && newStartDate && new Date(newStartDate) >= new Date(modalEndDate)) {
+      // If no duration set, clear end date if start date is after it
+      setModalEndDate('');
+    }
+  };
+
+  // Handle end date change with validation
+  const handleEndDateChange = (e) => {
+    const newEndDate = e.target.value;
+    setModalEndDate(newEndDate);
+  };
+
   const generateTourSummary = () => {
     return {
       basicInfo: {
@@ -476,31 +820,48 @@ export default function AddNewTour({ onClose }) {
         category: tourCategory,
         duration: `${durationValue} ${durationUnit.toLowerCase()}`,
         difficulty: difficulty,
-        region: region,
+        regions: selectedRegions,
+        shortDescription: shortDescription,
         highlights: highlights.filter(h => h.trim()),
         activities: selectedActivities
       },
       itinerary: {
         totalDays: itineraryDays.length,
-        destinations: [...new Set(itineraryDays.flatMap(day => day.selectedDestinations))]
+        destinations: [...new Set(itineraryDays.flatMap(day => day.selectedDestinations))],
+        completedDays: itineraryDays.filter(day => day.title && day.description && day.selectedDestinations.length > 0).length
       },
       accommodation: {
         totalOptions: accommodations.length,
-        accommodationNames: accommodations.map(acc => acc.title)
+        accommodationNames: accommodations.map(acc => acc.title),
+        completedAccommodations: accommodations.filter(acc => acc.title && acc.description).length
       },
       pricing: {
-        smallGroup: basePrice12 ? `$${basePrice12}` : 'Not set',
-        mediumGroup: basePrice35 ? `$${basePrice35}` : 'Not set',
-        largeGroup: basePrice6Plus ? `$${basePrice6Plus}` : 'Not set',
-        groupSize: `${minGroupSize}-${maxGroupSize} people`
+        price: pricePerPerson ? `$${pricePerPerson}` : 'Not set',
+        pricePerPerson: pricePerPerson,
+        availableSpots: availableSpots || 'Not set',
+        totalRevenue: pricePerPerson && availableSpots ? `$${(parseFloat(pricePerPerson) * parseInt(availableSpots)).toLocaleString()}` : 'Not calculated'
       },
       availability: {
         totalPeriods: availabilityRanges.length,
-        ranges: availabilityRanges.map(range => formatDateRange(range.startDate, range.endDate))
+        ranges: availabilityRanges.map(range => formatDateRange(range.startDate, range.endDate)),
+        totalDays: availabilityRanges.reduce((total, range) => {
+          const start = new Date(range.startDate);
+          const end = new Date(range.endDate);
+          return total + Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        }, 0)
       },
       media: {
         totalImages: uploadedImages.length,
-        hasPrimaryImage: uploadedImages.some(img => img.isPrimary)
+        hasPrimaryImage: uploadedImages.some(img => img.isPrimary),
+        primaryImage: uploadedImages.find(img => img.isPrimary)
+      },
+      completionStatus: {
+        basicInfoComplete: !!(tourName && tourCategory && durationValue && difficulty && selectedRegions.length > 0),
+        pricingComplete: !!(pricePerPerson && availableSpots),
+        itineraryComplete: itineraryDays.length > 0,
+        accommodationComplete: accommodations.length > 0,
+        availabilityComplete: availabilityRanges.length > 0,
+        mediaComplete: uploadedImages.length > 0 && uploadedImages.some(img => img.isPrimary)
       }
     };
   };  const ProgressIndicator = () => (
@@ -595,31 +956,43 @@ export default function AddNewTour({ onClose }) {
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
-                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Tour Category</Label>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Tour Category <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={tourCategory}
-                        onValueChange={setTourCategory}
-                        placeholder="Select category"
-                        options={tourCategories.map(cat => ({ value: cat, label: cat }))}
+                        onChange={(e) => setTourCategory(e.target.value)}
                         className="bg-white/80 border-gray-200 focus:border-blue-500"
-                      />
+                      >
+                        <option value="">Select category</option>
+                        {tourCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </Select>
                     </div>
                     <div>
-                      <Label className="text-sm font-bold text-gray-700 mb-3 block">Duration</Label>
+                      <Label className="text-sm font-bold text-gray-700 mb-3 block">
+                        Duration <span className="text-red-500">*</span>
+                      </Label>
                       <div className="flex gap-3">
                         <Input
                           type="number"
                           placeholder="8"
                           value={durationValue}
                           onChange={(e) => setDurationValue(e.target.value)}
-                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 text-center font-semibold"
+                          min="1"
+                          step="1"
                         />
                         <Select
                           value={durationUnit}
-                          onValueChange={setDurationUnit}
-                          options={durationUnits.map(unit => ({ value: unit, label: unit }))}
-                          className="w-32 bg-white/80 border-gray-200 focus:border-blue-500"
-                        />
+                          onChange={(e) => setDurationUnit(e.target.value)}
+                          className="flex-1 bg-white/80 border-gray-200 focus:border-blue-500"
+                        >
+                          {durationUnits.map(unit => (
+                            <option key={unit} value={unit}>{unit}</option>
+                          ))}
+                        </Select>
                       </div>
                     </div>
                   </div>
@@ -676,60 +1049,148 @@ export default function AddNewTour({ onClose }) {
                 {/* Difficulty Level */}
                 <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                   <Label className="text-sm font-bold text-gray-700 block">Difficulty Level</Label>
-                  <RadioGroup value={difficulty} onValueChange={setDifficulty}>
-                    <div className="flex space-x-8">
-                      {difficultyLevels.map(level => (
-                        <div key={level} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-blue-50/50 transition-colors">
-                          <RadioGroupItem value={level} className="border-2 border-gray-300 data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500" />
-                          <Label className="text-sm text-gray-700 font-medium cursor-pointer">
-                            {level}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </RadioGroup>
-                </div>                {/* Region */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-gray-700">Region</Label>
                   <Select
-                    value={region}
-                    onValueChange={setRegion}
-                    placeholder="Select region"
-                    options={regions.map(reg => ({ value: reg, label: reg }))}
-                  />
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                    className="bg-white/80 border-gray-200 focus:border-blue-500"
+                  >
+                    {difficultyLevels.map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </Select>
+                </div>                {/* Regions (Multiple Selection) */}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <Label className="text-sm font-bold text-gray-700 mb-4 block">
+                    Regions <span className="text-red-500">*</span>
+                  </Label>
+                  <p className="text-xs text-gray-600 mb-4">Select one or more regions where your tour will take place</p>
+                  
+                  {/* Selected Regions Display */}
+                  {selectedRegions.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRegions.map(region => (
+                          <span
+                            key={region}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                          >
+                            {region}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRegion(region)}
+                              className="ml-2 inline-flex items-center justify-center w-4 h-4 text-blue-600 hover:bg-blue-200 hover:text-blue-800 rounded-full transition-colors"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Region Selection Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {regions.map(region => (
+                      <button
+                        key={region}
+                        type="button"
+                        onClick={() => handleRegionToggle(region)}
+                        className={`p-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 ${
+                          selectedRegions.includes(region)
+                            ? 'bg-blue-500 text-white border-blue-500 shadow-lg'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {region}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {selectedRegions.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2 italic">Please select at least one region</p>
+                  )}
                 </div>
 
                 {/* Activities */}
-                <div className="space-y-4">
-                  <Label className="text-sm font-semibold text-gray-700">Tour Activities</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {availableActivities.map(activity => (
-                      <div key={activity} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={selectedActivities.includes(activity)}
-                          onCheckedChange={() => handleActivityToggle(activity)}
-                        />
-                        <Label className="text-sm text-gray-700 cursor-pointer">
-                          {activity}
-                        </Label>
-                      </div>
-                    ))}
+                <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold text-gray-700 block">Activities</Label>
+                    {selectedRegions.length > 0 && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">
+                        Filtered by: {selectedRegions.join(', ')}
+                      </span>
+                    )}
                   </div>
-                  {selectedActivities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {selectedActivities.map(activity => (
-                        <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700">
-                          {activity}
-                          <button
-                            type="button"
-                            className="ml-2 hover:text-blue-900"
-                            onClick={() => handleActivityToggle(activity)}
-                          >
-                            <XIcon className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
+                  
+                  {selectedRegions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="text-sm font-medium">Please select regions first</p>
+                      <p className="text-xs text-gray-400 mt-1">Activities will be filtered based on your selected regions</p>
                     </div>
+                  ) : (
+                    <>
+                      {/* Activity Dropdown */}
+                      <div className="space-y-3">
+                        <Select
+                          value={selectedActivity}
+                          onChange={handleActivityDropdownChange}
+                          className="bg-white/80 border-gray-200 focus:border-blue-500"
+                        >
+                          <option value="">
+                            {selectedRegions.length === 0 
+                              ? 'Please select regions first' 
+                              : availableActivitiesFromAPI.length === 0 
+                                ? 'No activities available for selected regions' 
+                                : 'Select an activity to add'
+                            }
+                          </option>
+                          {availableActivitiesFromAPI.map(activity => (
+                            <option 
+                              key={activity.id || activity.name} 
+                              value={activity.name}
+                              disabled={selectedActivities.includes(activity.name)}
+                            >
+                              {activity.name} ({activity.region || activity.location || activity.area || 'Unknown region'})
+                            </option>
+                          ))}
+                        </Select>
+                        {selectedRegions.length > 0 && availableActivitiesFromAPI.length === 0 && (
+                          <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                            No activities available for the selected regions. Please contact admin to add activities for: {selectedRegions.join(', ')}
+                          </p>
+                        )}
+                        {selectedRegions.length === 0 && (
+                          <p className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
+                            Please select at least one region above to see available activities.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Selected Activities */}
+                      {selectedActivities.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-semibold text-gray-700">Selected Activities</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedActivities.map(activity => (
+                              <Badge key={activity} variant="secondary" className="bg-blue-100 text-blue-700 px-3 py-1">
+                                {activity}
+                                <button
+                                  type="button"
+                                  className="ml-2 hover:text-blue-900 font-bold"
+                                  onClick={() => handleRemoveActivity(activity)}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -843,34 +1304,60 @@ export default function AddNewTour({ onClose }) {
 
                             {/* Destinations */}
                             <div className="space-y-3">
-                              <Label className="text-sm font-semibold text-gray-700">Destinations for this Day</Label>
-                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                                {availableDestinations.map(dest => (
-                                  <div key={dest} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      checked={day.selectedDestinations.includes(dest)}
-                                      onCheckedChange={() => handleItineraryDayDestinationToggle(day.id, dest)}
-                                    />
-                                    <Label className="text-sm text-gray-700 cursor-pointer">
-                                      {dest}
-                                    </Label>
-                                  </div>
-                                ))}
+                              <div className="flex items-center justify-between">
+                                <Label className="text-sm font-semibold text-gray-700">Places</Label>
+                                <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-md font-medium">
+                                  All available places
+                                </span>
                               </div>
-                              {day.selectedDestinations.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                  {day.selectedDestinations.map(dest => (
-                                    <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700">
-                                      {dest}
-                                      <button
-                                        type="button"
-                                        className="ml-2 hover:text-indigo-900"
-                                        onClick={() => handleItineraryDayDestinationToggle(day.id, dest)}
-                                      >
-                                        <XIcon className="h-3 w-3" />
-                                      </button>
-                                    </Badge>
+                              
+                              {/* Place Dropdown */}
+                              <div className="space-y-3">
+                                <Select
+                                  onChange={(e) => handlePlaceDropdownChange(e, day.id)}
+                                  className="bg-white/80 border-gray-200 focus:border-blue-500"
+                                >
+                                  <option value="">
+                                    {availablePlacesFromAPI.length === 0 
+                                      ? 'No places available' 
+                                      : 'Select a place to add'
+                                    }
+                                  </option>
+                                  {availablePlacesFromAPI.map(place => (
+                                    <option 
+                                      key={place.id || place.name} 
+                                      value={place.name}
+                                      disabled={day.selectedDestinations.includes(place.name)}
+                                    >
+                                      {place.name} ({place.region || place.location || place.area || 'Unknown region'})
+                                    </option>
                                   ))}
+                                </Select>
+                                {availablePlacesFromAPI.length === 0 && (
+                                  <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                                    No places available. Please contact admin to add places.
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Selected Places */}
+                              {day.selectedDestinations.length > 0 && (
+                                <div className="space-y-3">
+                                  <Label className="text-sm font-semibold text-gray-700">Selected Places</Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {day.selectedDestinations.map(dest => (
+                                      <Badge key={dest} variant="secondary" className="bg-indigo-100 text-indigo-700 px-3 py-1">
+                                        {dest}
+                                        <button
+                                          type="button"
+                                          className="ml-2 hover:text-indigo-900 font-bold"
+                                          onClick={() => handleRemovePlace(day.id, dest)}
+                                        >
+                                          <XIcon className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1213,147 +1700,59 @@ export default function AddNewTour({ onClose }) {
             )}            {/* Step 4: Pricing & Availability */}
             {currentStep === 4 && (
               <div className="space-y-10">
-                <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Pricing & Availability</h2>
-                  <p className="text-gray-600 mt-2">Set pricing tiers, group sizes, and available date ranges</p>
-                </div>
-
-                {/* Pricing Section */}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Pricing Tiers</h3>
-                    <p className="text-sm text-gray-600 mb-6">Set different prices based on group size for better flexibility</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Small Group (1-2 people) */}
-                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg shadow-blue-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Small Group</CardTitle>
-                            <p className="text-sm text-gray-600">1-2 people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="299"
-                              value={basePrice12}
-                              onChange={(e) => setBasePrice12(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Higher price for personalized experience</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Medium Group (3-5 people) */}
-                    <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg shadow-green-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Medium Group</CardTitle>
-                            <p className="text-sm text-gray-600">3-5 people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="249"
-                              value={basePrice35}
-                              onChange={(e) => setBasePrice35(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Balanced pricing for small groups</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Large Group (6+ people) */}
-                    <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg shadow-purple-900/5 rounded-xl overflow-hidden">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <DollarSign className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-bold text-gray-900">Large Group</CardTitle>
-                            <p className="text-sm text-gray-600">6+ people</p>
-                          </div>
-                        </div>
-                      </CardHeader>                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-semibold text-gray-700">
-                            Price per person (USD) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              placeholder="199"
-                              value={basePrice6Plus}
-                              onChange={(e) => setBasePrice6Plus(e.target.value)}
-                              className="pl-10 text-base"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">Best value for larger groups</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-
-                {/* Group Size Constraints */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Group Size Limits</h3>
-                    <p className="text-sm text-gray-600 mb-4">Define the minimum and maximum number of participants</p>
-                  </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700">Minimum Group Size</Label>
-                      <Input
-                        type="number"
-                        placeholder="2"
-                        value={minGroupSize}
-                        onChange={(e) => setMinGroupSize(e.target.value)}
-                        className="text-base"
-                        min="1"
-                      />
-                      <p className="text-xs text-gray-500">Minimum participants required to run the tour</p>
+                <div className="bg-gradient-to-r from-blue-50/80 via-purple-50/60 to-blue-50/80 p-6 rounded-2xl border border-blue-100/50">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                      <DollarSign className="w-6 h-6 text-white" />
                     </div>
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700">Maximum Group Size</Label>
+                    <div>
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Pricing & Availability</h2>
+                      <p className="text-gray-600 mt-1 font-medium">Set your tour price, available spots, and booking periods</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing & Capacity Section */}
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Tour Pricing */}
+                    <div className="space-y-4">
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Price Per Person (USD) <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <Input
+                          type="number"
+                          placeholder="299"
+                          value={pricePerPerson}
+                          onChange={(e) => setPricePerPerson(e.target.value)}
+                          className="pl-12 text-lg font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl shadow-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Fixed rate charged per person for this tour
+                      </p>
+                    </div>
+
+                    {/* Available Spots */}
+                    <div className="space-y-4">
+                      <Label className="text-sm font-semibold text-gray-700">
+                        Available Spots <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="number"
                         placeholder="12"
-                        value={maxGroupSize}
-                        onChange={(e) => setMaxGroupSize(e.target.value)}
-                        className="text-base"
+                        value={availableSpots}
+                        onChange={(e) => setAvailableSpots(e.target.value)}
+                        className="text-lg font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl shadow-sm"
                         min="1"
                       />
-                      <p className="text-xs text-gray-500">Maximum participants for quality experience</p>
+                      <p className="text-xs text-gray-500">
+                        Total number of participants allowed for this tour
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1367,7 +1766,7 @@ export default function AddNewTour({ onClose }) {
                     </div>
                     <Button
                       onClick={openAddAvailabilityModal}
-                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg shadow-amber-500/25"
+                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg shadow-amber-500/25 rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:scale-105"
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Add Date Range
@@ -1381,7 +1780,7 @@ export default function AddNewTour({ onClose }) {
                       <p className="text-gray-500 mb-6">Add date ranges when this tour will be available</p>
                       <Button
                         onClick={openAddAvailabilityModal}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl px-6 py-3 font-semibold transition-all duration-300 hover:scale-105"
                       >
                         <Calendar className="h-4 w-4 mr-2" />
                         Add First Date Range
@@ -1408,16 +1807,22 @@ export default function AddNewTour({ onClose }) {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => openEditAvailabilityModal(range)}
-                                  className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 h-8 w-8 p-0 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditAvailabilityModal(range);
+                                  }}
+                                  className="text-gray-500 hover:text-blue-500 hover:bg-blue-50"
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteAvailabilityRange(range.id)}
-                                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAvailabilityRange(range.id);
+                                  }}
+                                  className="text-gray-500 hover:text-red-500 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -1441,7 +1846,16 @@ export default function AddNewTour({ onClose }) {
                         <p className="text-gray-600 mt-2">
                           Set the start and end dates for this availability period
                         </p>
-                      </DialogHeader>                      <div className="space-y-6">
+                        {durationValue && durationUnit && !currentRangeToEditId && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-sm text-blue-700">
+                              <span className="font-semibold">Auto-calculation:</span> End date will be automatically calculated based on your tour duration. You can adjust it manually if needed.
+                            </p>
+                          </div>
+                        )}
+                      </DialogHeader>
+
+                      <div className="space-y-6">
                         <div className="space-y-3">
                           <Label className="text-sm font-semibold text-gray-700">
                             Start Date <span className="text-red-500">*</span>
@@ -1449,9 +1863,16 @@ export default function AddNewTour({ onClose }) {
                           <Input
                             type="date"
                             value={modalStartDate}
-                            onChange={(e) => setModalStartDate(e.target.value)}
+                            onChange={handleStartDateChange}
+                            min={currentRangeToEditId ? undefined : getTodayString()}
                             className="text-base"
                           />
+                          <p className="text-xs text-gray-500">
+                            {currentRangeToEditId 
+                              ? "You can modify the existing date range"
+                              : "Select today's date or any future date"
+                            }
+                          </p>
                         </div>
 
                         <div className="space-y-3">
@@ -1461,15 +1882,31 @@ export default function AddNewTour({ onClose }) {
                           <Input
                             type="date"
                             value={modalEndDate}
-                            onChange={(e) => setModalEndDate(e.target.value)}
+                            onChange={handleEndDateChange}
+                            min={modalStartDate || (currentRangeToEditId ? undefined : getTodayString())}
                             className="text-base"
+                            disabled={!modalStartDate}
                           />
+                          <p className="text-xs text-gray-500">
+                            {modalStartDate 
+                              ? (durationValue && durationUnit && !currentRangeToEditId 
+                                ? `Auto-calculated based on ${durationValue} ${durationUnit.toLowerCase()} duration. You can adjust manually.`
+                                : "End date must be after the start date")
+                              : "Please select a start date first"
+                            }
+                          </p>
                         </div>
 
                         {modalStartDate && modalEndDate && (
                           <div className="p-4 bg-blue-50 rounded-lg">
                             <p className="text-sm font-medium text-blue-900">
-                              Duration: {Math.ceil((new Date(modalEndDate) - new Date(modalStartDate)) / (1000 * 60 * 60 * 24))} days
+                              Duration: {(() => {
+                                const start = new Date(modalStartDate);
+                                const end = new Date(modalEndDate);
+                                const diffTime = end - start;
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                return diffDays > 0 ? `${diffDays} day${diffDays !== 1 ? 's' : ''}` : 'Invalid date range';
+                              })()} 
                             </p>
                           </div>
                         )}
@@ -1491,7 +1928,8 @@ export default function AddNewTour({ onClose }) {
                         </Button>
                       </DialogFooter>
                     </div>
-                  </DialogContent>                </Dialog>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
 
@@ -1618,155 +2056,101 @@ export default function AddNewTour({ onClose }) {
                   )}                </div>
 
                 {/* Tour Summary Preview */}
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div className="border-t border-gray-200 pt-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Tour Summary</h3>
-                    <p className="text-sm text-gray-600 mb-6">Review all the details before publishing your tour</p>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">Tour Summary</h3>
+                        <p className="text-gray-600 mt-1">Review all details before publishing your tour</p>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span className="text-gray-600">Ready to publish</span>
+                      </div>
+                    </div>
                   </div>
 
                   {(() => {
                     const summary = generateTourSummary();
+                    const completionPercentage = Math.round(
+                      (Object.values(summary.completionStatus).filter(Boolean).length / 
+                       Object.values(summary.completionStatus).length) * 100
+                    );
+
                     return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Basic Information Card */}
-                        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg shadow-blue-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                              </div>
-                              Basic Information
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Name:</span>
-                                <p className="text-gray-600">{summary.basicInfo.name || 'Not set'}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Category:</span>
-                                <p className="text-gray-600">{summary.basicInfo.category || 'Not set'}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Duration:</span>
-                                <p className="text-gray-600">{summary.basicInfo.duration}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Difficulty:</span>
-                                <p className="text-gray-600">{summary.basicInfo.difficulty}</p>
-                              </div>
-                            </div>
-                            {summary.basicInfo.highlights.length > 0 && (
-                              <div>
-                                <span className="font-semibold text-gray-700 block mb-1">Highlights:</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {summary.basicInfo.highlights.slice(0, 3).map((highlight, idx) => (
-                                    <Badge key={idx} variant="secondary" className="text-xs">
-                                      {highlight.length > 20 ? `${highlight.slice(0, 20)}...` : highlight}
-                                    </Badge>
-                                  ))}
-                                  {summary.basicInfo.highlights.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      +{summary.basicInfo.highlights.length - 3} more
-                                    </Badge>
-                                  )}
+                      <div className="space-y-8">
+                        {/* Hero Summary Card */}
+                        <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white border-0 shadow-2xl shadow-blue-900/25 rounded-2xl overflow-hidden">
+                          <CardContent className="p-8">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h2 className="text-3xl font-bold mb-2">{summary.basicInfo.name || 'Untitled Tour'}</h2>
+                                <p className="text-blue-100 mb-4 text-lg">{summary.basicInfo.shortDescription || 'No description provided'}</p>
+                                <div className="flex flex-wrap gap-4 text-sm">
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    {summary.basicInfo.duration}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {summary.basicInfo.region || 'No region'}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <DollarSign className="h-4 w-4 mr-2" />
+                                    {summary.pricing.price}
+                                  </div>
+                                  <div className="flex items-center bg-white/20 rounded-full px-3 py-1">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    {summary.pricing.availableSpots} spots
+                                  </div>
                                 </div>
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        {/* Pricing Card */}
-                        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg shadow-green-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-green-100 rounded-lg mr-3">
-                                <DollarSign className="h-5 w-5 text-green-600" />
-                              </div>
-                              Pricing & Groups
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Small Group:</span>
-                                <p className="text-gray-600">{summary.pricing.smallGroup}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Medium Group:</span>
-                                <p className="text-gray-600">{summary.pricing.mediumGroup}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Large Group:</span>
-                                <p className="text-gray-600">{summary.pricing.largeGroup}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Group Size:</span>
-                                <p className="text-gray-600">{summary.pricing.groupSize}</p>
-                              </div>
+                              {summary.media.primaryImage && (
+                                <div className="w-24 h-24 rounded-xl overflow-hidden shadow-lg ml-6">
+                                  <img 
+                                    src={summary.media.primaryImage.preview} 
+                                    alt="Tour preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
 
-                        {/* Content Stats Card */}
-                        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg shadow-purple-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                                <ImagePlus className="h-5 w-5 text-purple-600" />
-                              </div>
-                              Content & Media
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold text-gray-700">Itinerary Days:</span>
-                                <p className="text-gray-600">{summary.itinerary.totalDays}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Accommodations:</span>
-                                <p className="text-gray-600">{summary.accommodation.totalOptions}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Images:</span>
-                                <p className="text-gray-600">{summary.media.totalImages}</p>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Availability:</span>
-                                <p className="text-gray-600">{summary.availability.totalPeriods} periods</p>
-                              </div>
+                        {/* Completion Progress */}
+                        <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-semibold text-gray-900">Completion Progress</h4>
+                              <span className="text-2xl font-bold text-blue-600">{completionPercentage}%</span>
                             </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Readiness Check Card */}
-                        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 shadow-lg shadow-amber-900/5 rounded-xl">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
-                              <div className="p-2 bg-amber-100 rounded-lg mr-3">
-                                <XIcon className="h-5 w-5 text-amber-600" />
-                              </div>
-                              Readiness Check
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="space-y-2">
+                            <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500" 
+                                style={{ width: `${completionPercentage}%` }}
+                              ></div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                               {[
-                                { check: summary.basicInfo.name, label: 'Tour name' },
-                                { check: summary.pricing.smallGroup !== 'Not set', label: 'Pricing set' },
-                                { check: summary.itinerary.totalDays > 0, label: 'Itinerary created' },
-                                { check: summary.media.hasPrimaryImage, label: 'Primary image set' },
-                                { check: summary.availability.totalPeriods > 0, label: 'Availability set' }
-                              ].map((item, idx) => (
-                                <div key={idx} className="flex items-center space-x-2 text-sm">
-                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    item.check ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                                { key: 'basicInfoComplete', label: 'Basic Info', icon: '📋' },
+                                { key: 'pricingComplete', label: 'Pricing', icon: '💰' },
+                                { key: 'itineraryComplete', label: 'Itinerary', icon: '🗓️' },
+                                { key: 'accommodationComplete', label: 'Hotels', icon: '🏨' },
+                                { key: 'availabilityComplete', label: 'Availability', icon: '📅' },
+                                { key: 'mediaComplete', label: 'Media', icon: '📸' }
+                              ].map((item) => (
+                                <div key={item.key} className="flex flex-col items-center text-center">
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg mb-2 ${
+                                    summary.completionStatus[item.key] 
+                                      ? 'bg-green-100 text-green-600' 
+                                      : 'bg-gray-100 text-gray-400'
                                   }`}>
-                                    {item.check ? '✓' : '✗'}
+                                    {summary.completionStatus[item.key] ? '✓' : item.icon}
                                   </div>
-                                  <span className={item.check ? 'text-gray-600' : 'text-red-600'}>
+                                  <span className={`text-xs font-medium ${
+                                    summary.completionStatus[item.key] ? 'text-green-600' : 'text-gray-500'
+                                  }`}>
                                     {item.label}
                                   </span>
                                 </div>
@@ -1774,6 +2158,197 @@ export default function AddNewTour({ onClose }) {
                             </div>
                           </CardContent>
                         </Card>
+
+                        {/* Detailed Information Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                          {/* Basic Information Card */}
+                          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                  <Info className="h-5 w-5 text-blue-600" />
+                                </div>
+                                Basic Information
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-6">
+                              <div className="space-y-5">
+                                <div className="flex justify-between items-start py-3">
+                                  <span className="font-semibold text-gray-700">Name:</span>
+                                  <span className="text-gray-600 text-right max-w-[60%] break-words">{summary.basicInfo.name || 'Not set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Category:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.category || 'Not set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Duration:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.duration}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Difficulty:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.difficulty}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3">
+                                  <span className="font-semibold text-gray-700">Region:</span>
+                                  <span className="text-gray-600">{summary.basicInfo.region || 'Not set'}</span>
+                                </div>
+                              </div>
+                              {summary.basicInfo.highlights.length > 0 && (
+                                <div className="pt-5 border-t border-blue-200">
+                                  <span className="font-semibold text-gray-700 block mb-4">Highlights ({summary.basicInfo.highlights.length}):</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.basicInfo.highlights.slice(0, 3).map((highlight, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5">
+                                        {highlight.length > 15 ? `${highlight.slice(0, 15)}...` : highlight}
+                                      </Badge>
+                                    ))}
+                                    {summary.basicInfo.highlights.length > 3 && (
+                                      <Badge variant="secondary" className="text-xs bg-blue-200 text-blue-800 px-3 py-1.5">
+                                        +{summary.basicInfo.highlights.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {summary.basicInfo.activities.length > 0 && (
+                                <div className="pt-5 border-t border-blue-200">
+                                  <span className="font-semibold text-gray-700 block mb-4">Activities ({summary.basicInfo.activities.length}):</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.basicInfo.activities.slice(0, 2).map((activity, idx) => (
+                                      <Badge key={idx} variant="outline" className="text-xs border-blue-300 text-blue-700 px-3 py-1.5">
+                                        {activity.length > 12 ? `${activity.slice(0, 12)}...` : activity}
+                                      </Badge>
+                                    ))}
+                                    {summary.basicInfo.activities.length > 2 && (
+                                      <Badge variant="outline" className="text-xs border-blue-400 text-blue-800 px-3 py-1.5">
+                                        +{summary.basicInfo.activities.length - 2} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Pricing & Revenue Card */}
+                          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                                  <DollarSign className="h-5 w-5 text-green-600" />
+                                </div>
+                                Pricing & Revenue
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-5">
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-center py-2">
+                                  <span className="font-semibold text-gray-700">Price Per Person:</span>
+                                  <span className="text-gray-600 font-bold">{summary.pricing.price}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-2">
+                                  <span className="font-semibold text-gray-700">Available Spots:</span>
+                                  <span className="text-gray-600">{summary.pricing.availableSpots}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-3 border-t border-green-200">
+                                  <span className="font-semibold text-gray-700">Max Revenue:</span>
+                                  <span className="text-green-600 font-bold text-lg">{summary.pricing.totalRevenue}</span>
+                                </div>
+                              </div>
+                              {summary.availability.totalPeriods > 0 && (
+                                <div className="pt-4 border-t border-green-200">
+                                  <span className="font-semibold text-gray-700 block mb-3">Availability:</span>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between text-sm py-2">
+                                      <span>Booking Periods:</span>
+                                      <span className="font-medium">{summary.availability.totalPeriods}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm py-2">
+                                      <span>Total Available Days:</span>
+                                      <span className="font-medium">{summary.availability.totalDays}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Content Statistics Card */}
+                          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                                  <BarChart3 className="h-5 w-5 text-purple-600" />
+                                </div>
+                                Content Statistics
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6 space-y-5">
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Itinerary Days:</span>
+                                  <span className="text-gray-600">{summary.itinerary.totalDays}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Destinations:</span>
+                                  <span className="text-gray-600">{summary.itinerary.destinations.length}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Accommodations:</span>
+                                  <span className="text-gray-600">{summary.accommodation.totalOptions}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="font-semibold text-gray-700">Images:</span>
+                                  <span className="text-gray-600">{summary.media.totalImages}</span>
+                                </div>
+                              </div>
+                              {summary.itinerary.destinations.length > 0 && (
+                                <div className="pt-4 border-t border-purple-200">
+                                  <span className="font-semibold text-gray-700 block mb-3">Top Destinations:</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {summary.itinerary.destinations.slice(0, 3).map((dest, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs bg-purple-100 text-purple-700 px-2 py-1">
+                                        {dest.length > 12 ? `${dest.slice(0, 12)}...` : dest}
+                                      </Badge>
+                                    ))}
+                                    {summary.itinerary.destinations.length > 3 && (
+                                      <Badge variant="secondary" className="text-xs bg-purple-200 text-purple-800 px-2 py-1">
+                                        +{summary.itinerary.destinations.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Availability Schedule */}
+                        {summary.availability.ranges.length > 0 && (
+                          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 shadow-lg rounded-xl">
+                            <CardHeader className="pb-3 px-6 pt-6">
+                              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                                <div className="p-2 bg-amber-100 rounded-lg mr-3">
+                                  <Calendar className="h-5 w-5 text-amber-600" />
+                                </div>
+                                Availability Schedule
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 pb-6 px-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {summary.availability.ranges.map((range, idx) => (
+                                  <div key={idx} className="bg-white/60 rounded-lg p-4 border border-amber-200">
+                                    <div className="flex items-center text-sm">
+                                      <Calendar className="h-4 w-4 text-amber-600 mr-2" />
+                                      <span className="font-medium text-gray-700">{range}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     );
                   })()}

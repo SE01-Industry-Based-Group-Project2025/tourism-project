@@ -78,14 +78,28 @@ const Places = () => {
   const activeData = activeTab === 'Destinations' ? destinations : activities;
   const setActiveData = activeTab === 'Destinations' ? setDestinations : setActivities;
 
-  const filteredData = activeData.filter((item) => {
-    const matchRegion =
-      selectedRegion === 'All Regions' || item.region === selectedRegion;
-    const matchSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return matchRegion && matchSearch;
-  });
+  const filteredData = activeData
+    .sort((a, b) => {
+      // Try to sort by creation date/time if available, otherwise fall back to ID
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      } else if (a.dateCreated && b.dateCreated) {
+        return new Date(b.dateCreated) - new Date(a.dateCreated);
+      } else if (a.created_at && b.created_at) {
+        return new Date(b.created_at) - new Date(a.created_at);
+      } else {
+        // Fall back to ID sorting (most recent ID first)
+        return b.id - a.id;
+      }
+    })
+    .filter((item) => {
+      const matchRegion =
+        selectedRegion === 'All Regions' || item.region === selectedRegion;
+      const matchSearch = item.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      return matchRegion && matchSearch;
+    });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
@@ -296,6 +310,7 @@ const Places = () => {
             totalPages={totalPages}
             onPrevious={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             onNext={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onPageChange={setCurrentPage}
           />
         </div>
 

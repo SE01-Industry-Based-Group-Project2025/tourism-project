@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import { ToursProvider } from "./contexts/ToursContext";
 import { useSecurityMonitor } from "./hooks/useSecurityMonitor";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -12,6 +13,8 @@ import AdminLayout from "./components/layouts/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Tours from "./pages/Tours";
 import AddTour from "./pages/AddTour";
+import TourView from "./pages/TourView";
+import TourEdit from "./pages/TourEdit";
 import Places from "./pages/Places";
 import Users from "./pages/Users";
 import QuoteRequests from "./pages/QuoteRequests";
@@ -89,7 +92,11 @@ export default function App() {
     };
   }, [isAuthenticated]);
   return (
+<<<<<<< HEAD
     <>
+=======
+    <ToursProvider>
+>>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
       <Routes>
         {/* Public landing page - should be first */}
         <Route path="/" element={<LandingPage />} />
@@ -119,6 +126,11 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="tours" element={<Tours />} />
           <Route path="tours/new" element={<AddTour />} />
+<<<<<<< HEAD
+=======
+          <Route path="tours/:id" element={<TourView />} />
+          <Route path="tours/:id/edit" element={<TourEdit />} />
+>>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
           <Route path="places" element={<Places />} />
           <Route path="users" element={<Users />} />
           <Route path="quote-requests" element={<QuoteRequests />} />
@@ -127,7 +139,11 @@ export default function App() {
         </Route>      {/* Fallback: if someone tries anything else */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+<<<<<<< HEAD
       <ToastContainer />
     </>
+=======
+    </ToursProvider>
+>>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
   );
 }
