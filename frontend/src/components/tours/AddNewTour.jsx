@@ -215,7 +215,7 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
       fetchActivities(selectedRegions); // Pass current selected regions
       fetchPlaces();
     }
-  }, [getAuthHeaders, mode]);
+  }, [getAuthHeaders, mode, tourCategory, startDate, endDate, selectedRegions, fetchActivities]);
 
   const handleNext = () => {
     if (currentStep < steps.length) {
