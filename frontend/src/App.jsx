@@ -92,11 +92,7 @@ export default function App() {
     };
   }, [isAuthenticated]);
   return (
-<<<<<<< HEAD
-    <>
-=======
     <ToursProvider>
->>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
       <Routes>
         {/* Public landing page - should be first */}
         <Route path="/" element={<LandingPage />} />
@@ -117,7 +113,8 @@ export default function App() {
 
         {/* Admin-only routes */}
         <Route
-          path="/admin/*"        element={
+          path="/admin/*"
+          element={
             <ProtectedRoute requiredRole="ROLE_ADMIN">
               <AdminLayout />
             </ProtectedRoute>
@@ -126,24 +123,19 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="tours" element={<Tours />} />
           <Route path="tours/new" element={<AddTour />} />
-<<<<<<< HEAD
-=======
           <Route path="tours/:id" element={<TourView />} />
           <Route path="tours/:id/edit" element={<TourEdit />} />
->>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
           <Route path="places" element={<Places />} />
           <Route path="users" element={<Users />} />
           <Route path="quote-requests" element={<QuoteRequests />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="analytics" element={<Analytics />} />
-        </Route>      {/* Fallback: if someone tries anything else */}
+        </Route>
+
+        {/* Fallback: if someone tries anything else */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-<<<<<<< HEAD
       <ToastContainer />
-    </>
-=======
     </ToursProvider>
->>>>>>> 50cd7c54ddec9518e56546fc5fdd7075540aeb7b
   );
 }
