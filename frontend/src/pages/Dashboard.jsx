@@ -1,11 +1,72 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PageHeader from "../components/ui/PageHeader";
-import StatsCard from "../components/ui/StatsCard";
 import ContentCard from "../components/ui/ContentCard";
+import StatsCard from "../components/ui/StatsCard";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isAdmin, getAuthHeaders } = useAuth();
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    adminUsers: 0,
+    regularUsers: 0,
+    activeUsers: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  // API Configuration
+  const API_BASE = 'http://localhost:8080';
+  const USERS_API = `${API_BASE}/api/admin/users`;
+
+  // Fetch user statistics
+  const fetchUserStats = async () => {
+    try {
+      setLoading(true);
+      const [allUsersRes, adminUsersRes, regularUsersRes] = await Promise.all([
+        fetch(USERS_API, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${USERS_API}/admins`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${USERS_API}/regular-users`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        })
+      ]);
+
+      if (allUsersRes.ok && adminUsersRes.ok && regularUsersRes.ok) {
+        const [allUsers, adminUsers, regularUsers] = await Promise.all([
+          allUsersRes.json(),
+          adminUsersRes.json(),
+          regularUsersRes.json()
+        ]);
+
+        const activeUsers = allUsers.filter(user => user.enabled).length;
+
+        setUserStats({
+          totalUsers: allUsers.length,
+          adminUsers: adminUsers.length,
+          regularUsers: regularUsers.length,
+          activeUsers
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUserStats();
+    }
+  }, [isAdmin]);
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -35,32 +96,32 @@ export default function Dashboard() {
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Today's Bookings"
-          value="4006"
-          percentage="10.00% (30 days)"
+          title="Total Users"
+          value={loading ? "..." : userStats.totalUsers.toString()}
+          percentage="All registered users"
           color="blue"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           )}
         />
         <StatsCard
-          title="Total Bookings"
-          value="61344"
-          percentage="22.00% (30 days)"
-          color="indigo"
+          title="Administrators"
+          value={loading ? "..." : userStats.adminUsers.toString()}
+          percentage="Admin users"
+          color="purple"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           )}
         />
         <StatsCard
-          title="Number of Meetings"
-          value="34040"
-          percentage="2.00% (30 days)"
-          color="purple"
+          title="Regular Users"
+          value={loading ? "..." : userStats.regularUsers.toString()}
+          percentage="Customer accounts"
+          color="green"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -68,15 +129,16 @@ export default function Dashboard() {
           )}
         />
         <StatsCard
-          title="Number of Clients"
-          value="47033"
-          percentage="0.22% (30 days)"
+          title="Active Users"
+          value={loading ? "..." : userStats.activeUsers.toString()}
+          percentage="Enabled accounts"
           color="pink"
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-          )}        />
+          )}
+        />
       </div>
 
       {/* Quick Actions */}
@@ -111,6 +173,17 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <span className="font-semibold text-gray-900">Add Destination</span>
+              </button>
+              <button 
+                onClick={() => navigate('/admin/users')}
+                className="w-full flex items-center gap-4 p-4 text-left bg-gradient-to-r from-indigo-50 to-indigo-100/50 hover:from-indigo-100 hover:to-indigo-200/50 rounded-xl transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
+              >
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197v0z" />
+                  </svg>
+                </div>
+                <span className="font-semibold text-gray-900">Manage Users</span>
               </button>
               <button 
                 onClick={() => navigate('/admin/analytics')}
