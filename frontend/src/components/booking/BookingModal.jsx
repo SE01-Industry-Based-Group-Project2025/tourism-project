@@ -1,8 +1,10 @@
 // src/components/booking/BookingModal.jsx
 
 import React, { useState } from 'react';
+import { useToast } from '../feedback/useToast';
 
 export default function BookingModal({ tour, isOpen, onClose }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     checkInDate: '',
     checkOutDate: '',
@@ -28,7 +30,7 @@ export default function BookingModal({ tour, isOpen, onClose }) {
     e.preventDefault();
     // Here you would typically send the booking data to your backend
     console.log('Booking data:', { tour, ...formData });
-    alert('Booking request submitted! We will contact you soon.');
+    toast.success('Booking request submitted! We will contact you soon.');
     onClose();
     resetForm();
   };

@@ -2,11 +2,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/feedback/useToast';
 import { Button } from '../../components/ui/Button';
 
 const BookNowButton = ({ tour }) => {
   const navigate = useNavigate();
   const { isAuthenticated, isUser } = useAuth();
+  const toast = useToast();
 
   // Don't show button for templates
   if (tour?.isTemplate === true) {
@@ -20,7 +22,7 @@ const BookNowButton = ({ tour }) => {
     }
 
     if (!isUser) {
-      alert('Only users can book tours. Please log in with a user account.');
+      toast.error('Only users can book tours. Please log in with a user account.');
       return;
     }
 

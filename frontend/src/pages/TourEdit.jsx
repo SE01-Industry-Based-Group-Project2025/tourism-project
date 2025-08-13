@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/feedback/useToast';
 import { Button } from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import ContentCard from '../components/ui/ContentCard';
@@ -11,6 +12,7 @@ export default function TourEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getAuthHeaders, token, user, isAuthenticated } = useAuth();
+  const toast = useToast();
   
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -313,7 +315,7 @@ export default function TourEdit() {
       if (res.ok) {
         const responseData = await res.json();
         console.log('Update successful:', responseData);
-        alert('Tour updated successfully!');
+        toast.success('Tour updated successfully!');
         navigate(`/admin/tours/${id}`);
       } else if (res.status === 403) {
         const errorText = await res.text();
@@ -331,7 +333,7 @@ export default function TourEdit() {
     } catch (err) {
       console.error('Error updating tour:', err);
       setError(err.message || 'Failed to update tour');
-      alert(err.message || 'Failed to update tour');
+      toast.error(err.message || 'Failed to update tour');
     } finally {
       setSaving(false);
     }

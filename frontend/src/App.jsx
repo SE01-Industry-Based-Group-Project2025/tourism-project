@@ -29,6 +29,10 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import TouristDashboard from './pages/TouristDashboard';
 import { bookingRoutes } from './routes/bookingRoutes';
 
+// Admin Features
+import AdminBookings from './features/admin/bookings/AdminBookings';
+import AdminBookingDetails from './features/admin/bookings/AdminBookingDetails';
+
 export default function App() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -132,6 +136,8 @@ export default function App() {
           <Route path="tours/:id/edit" element={<TourEdit />} />
           <Route path="places" element={<Places />} />
           <Route path="users" element={<Users />} />
+          <Route path="bookings" element={<AdminBookings />} />
+          <Route path="bookings/:id" element={<AdminBookingDetails />} />
           <Route path="quote-requests" element={<QuoteRequests />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="analytics" element={<Analytics />} />

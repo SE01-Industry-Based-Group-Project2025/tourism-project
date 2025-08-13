@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../feedback/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -122,6 +123,7 @@ export default function AddNewTour({ onClose, mode = 'admin', isTemplate = false
   const [specialRequirements, setSpecialRequirements] = useState('');
 
   const { getAuthHeaders } = useAuth();
+  const toast = useToast();
   const API_BASE = 'http://localhost:8080';
   const TOURS_API = `${API_BASE}/api/tours`;
   const ACTIVITY_API = `${API_BASE}/api/activities`;
@@ -841,11 +843,11 @@ export default function AddNewTour({ onClose, mode = 'admin', isTemplate = false
         
         const responseData = await res.json();
         console.log('Custom tour request submitted successfully:', responseData);
-        alert('Custom tour request submitted successfully! We will contact you soon.');
+        toast.success('Custom tour request submitted successfully! We will contact you soon.');
         if (onClose) onClose();
       } catch (err) {
         console.error('Submit custom tour request error', err);
-        alert('Error submitting tour request: ' + err.message);
+        toast.error('Error submitting tour request: ' + err.message);
       }
       return;
     }
@@ -1020,20 +1022,20 @@ export default function AddNewTour({ onClose, mode = 'admin', isTemplate = false
         try {
           const errorJson = JSON.parse(errorData);
           console.error('Parsed error:', errorJson);
-          alert(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}: ${errorJson.message || errorJson.error || 'Unknown error'}`);
+          toast.error(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}: ${errorJson.message || errorJson.error || 'Unknown error'}`);
         } catch {
-          alert(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}. Status: ${res.status}. Response: ${errorData}`);
+          toast.error(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}. Status: ${res.status}. Response: ${errorData}`);
         }
         return;
       }
       
       const responseData = await res.json();
       console.log('Success response:', responseData);
-      alert(fromTemplateId ? 'Tour published from template successfully!' : isTemplate ? 'Template saved successfully' : 'Tour published successfully');
+      toast.success(fromTemplateId ? 'Tour published from template successfully!' : isTemplate ? 'Template saved successfully!' : 'Tour published successfully!');
       if (onClose) onClose();
     } catch (err) {
       console.error('Publish tour error', err);
-      alert(`Error ${fromTemplateId ? 'publishing tour from template' : isTemplate ? 'saving template' : 'publishing tour'}: ` + err.message);
+      toast.error(`Error ${fromTemplateId ? 'publishing tour from template' : isTemplate ? 'saving template' : 'publishing tour'}: ` + err.message);
     }
   };
 

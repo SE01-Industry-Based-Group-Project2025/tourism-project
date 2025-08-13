@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/feedback/useToast';
+import { useConfirm } from '../components/feedback/useConfirm';
 import { Button } from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import ContentCard from '../components/ui/ContentCard';
@@ -12,6 +14,8 @@ export default function TourView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getAuthHeaders } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +56,7 @@ export default function TourView() {
   }, [id, getAuthHeaders]);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this tour? This action cannot be undone.')) {
+    if (await confirm('Are you sure you want to delete this tour? This action cannot be undone.')) {
       try {
         const res = await fetch(`${TOURS_API}/${id}`, {
           method: 'DELETE',
@@ -60,14 +64,14 @@ export default function TourView() {
         });
         
         if (res.ok) {
-          alert('Tour deleted successfully');
+          toast.success('Tour deleted successfully');
           navigate('/admin/tours');
         } else {
-          alert('Failed to delete tour');
+          toast.error('Failed to delete tour');
         }
       } catch (err) {
         console.error('Error deleting tour:', err);
-        alert('Error deleting tour');
+        toast.error('Error deleting tour');
       }
     }
   };

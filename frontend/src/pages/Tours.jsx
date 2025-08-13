@@ -9,11 +9,15 @@ import PaginationControls from "../components/ui/PaginationControls";
 import { Button } from "../components/ui/Button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/feedback/useToast";
+import { useConfirm } from "../components/feedback/useConfirm";
 
 export default function Tours() {
   const navigate = useNavigate();
   const location = useLocation();
   const { getAuthHeaders } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   
   // Determine if we're in templates mode based on the route
   const isTemplateMode = location.pathname.includes('/templates');
@@ -120,13 +124,13 @@ export default function Tours() {
       if (res.ok) {
         // Remove the deleted tour from local state
         setTours(prevTours => prevTours.filter(tour => tour.id !== id));
-        alert('Tour deleted successfully');
+        toast.success('Tour deleted successfully');
       } else {
-        alert('Failed to delete tour');
+        toast.error('Failed to delete tour');
       }
     } catch (err) {
       console.error('Error deleting tour:', err);
-      alert('Error deleting tour');
+      toast.error('Error deleting tour');
     }
   };
 
@@ -180,7 +184,7 @@ export default function Tours() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this tour?')) {
+    if (await confirm('Are you sure you want to delete this tour?')) {
       await deleteTour(id);
     }
   };

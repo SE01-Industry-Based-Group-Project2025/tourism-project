@@ -4,7 +4,263 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTours } from '../../contexts/ToursContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaTimes, FaStar, FaClock, FaMapMarkerAlt, FaUsers, FaCalendarAlt, FaHeart, FaShare } from 'react-icons/fa';
+import { FaTimes, FaStar, FaClock, FaMapMarkerAlt, FaUsers, FaCalendarAlt, FaHeart, FaShare, FaChevronDown, FaChevronUp, FaBed, FaRoute } from 'react-icons/fa';
+
+// Expandable Itinerary Component
+function ExpandableItinerary({ itinerary }) {
+  const [expandedDays, setExpandedDays] = useState(new Set([0])); // First day expanded by default
+
+  const toggleDay = (dayIndex) => {
+    const newExpanded = new Set(expandedDays);
+    if (newExpanded.has(dayIndex)) {
+      newExpanded.delete(dayIndex);
+    } else {
+      newExpanded.add(dayIndex);
+    }
+    setExpandedDays(newExpanded);
+  };
+
+  const expandAll = () => {
+    setExpandedDays(new Set(itinerary.map((_, index) => index)));
+  };
+
+  const collapseAll = () => {
+    setExpandedDays(new Set());
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Expand/Collapse All Controls */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={expandAll}
+          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+        >
+          Expand All
+        </button>
+        <button
+          onClick={collapseAll}
+          className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+        >
+          Collapse All
+        </button>
+      </div>
+
+      {/* Itinerary Days */}
+      {itinerary.map((day, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+          {/* Day Header - Always Visible */}
+          <div
+            className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-colors"
+            onClick={() => toggleDay(index)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                {day.day || index + 1}
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-800 text-lg">
+                  {day.title || `Day ${day.day || index + 1}`}
+                </h4>
+                {!expandedDays.has(index) && day.description && (
+                  <p className="text-gray-600 text-sm truncate max-w-md">
+                    {day.description.substring(0, 100)}...
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {expandedDays.has(index) ? (
+                <FaChevronUp className="text-gray-500" />
+              ) : (
+                <FaChevronDown className="text-gray-500" />
+              )}
+            </div>
+          </div>
+
+          {/* Day Details - Expandable */}
+          {expandedDays.has(index) && (
+            <div className="p-4 bg-white border-t border-gray-100">
+              {/* Description */}
+              {day.description && (
+                <div className="mb-6">
+                  <p className="text-gray-700 leading-relaxed">{day.description}</p>
+                </div>
+              )}
+
+              {/* Transport & Time Info */}
+              {(day.transportMode || day.estimatedTime) && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                  <div className="flex items-center gap-4 text-sm">
+                    {day.transportMode && (
+                      <div className="flex items-center gap-2">
+                        <FaRoute className="text-blue-600" />
+                        <span className="text-blue-800 font-medium">Transport:</span>
+                        <span className="text-blue-700">{day.transportMode}</span>
+                      </div>
+                    )}
+                    {day.estimatedTime && (
+                      <div className="flex items-center gap-2">
+                        <FaClock className="text-blue-600" />
+                        <span className="text-blue-800 font-medium">Duration:</span>
+                        <span className="text-blue-700">{day.estimatedTime}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  {/* Destinations */}
+                  {day.destinations && day.destinations.length > 0 && (
+                    <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                      <h5 className="font-semibold text-indigo-800 mb-3 flex items-center gap-2">
+                        <FaMapMarkerAlt className="text-indigo-600" />
+                        Key Destinations
+                      </h5>
+                      <div className="space-y-3">
+                        {day.destinations.map((destination, destIndex) => (
+                          <div key={destIndex} className="bg-white rounded-md p-3 border border-indigo-100">
+                            <div className="flex items-start gap-2">
+                              <span className="w-2 h-2 bg-indigo-600 rounded-full mt-2 flex-shrink-0"></span>
+                              <div>
+                                <h6 className="font-medium text-indigo-900">
+                                  {destination.name || destination}
+                                </h6>
+                                {destination.description && (
+                                  <p className="text-sm text-indigo-700 mt-1">{destination.description}</p>
+                                )}
+                                {destination.type && (
+                                  <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                                    {destination.type}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Places to Visit (if different from destinations) */}
+                  {day.places && day.places.length > 0 && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <h5 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                        <FaMapMarkerAlt className="text-green-600" />
+                        Places to Visit
+                      </h5>
+                      <div className="space-y-2">
+                        {day.places.map((place, placeIndex) => (
+                          <div key={placeIndex} className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></span>
+                            <div>
+                              <span className="text-green-700 text-sm font-medium">
+                                {place.name || place}
+                              </span>
+                              {place.description && (
+                                <p className="text-xs text-green-600 mt-0.5">{place.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activities */}
+                  {day.activities && day.activities.length > 0 && (
+                    <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                      <h5 className="font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                        <FaStar className="text-orange-600" />
+                        Activities & Experiences
+                      </h5>
+                      <div className="space-y-3">
+                        {day.activities.map((activity, actIndex) => (
+                          <div key={actIndex} className="bg-white rounded-md p-3 border border-orange-100">
+                            <div className="flex items-start gap-2">
+                              <span className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></span>
+                              <div>
+                                <h6 className="font-medium text-orange-900">
+                                  {activity.name || activity}
+                                </h6>
+                                {activity.description && (
+                                  <p className="text-sm text-orange-700 mt-1">{activity.description}</p>
+                                )}
+                                {activity.duration && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <FaClock className="text-orange-600 text-xs" />
+                                    <span className="text-xs text-orange-600">{activity.duration}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  {/* Accommodation */}
+                  {day.accommodation && (
+                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                      <h5 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                        <FaBed className="text-purple-600" />
+                        Accommodation
+                      </h5>
+                      <div className="bg-white rounded-md p-3 border border-purple-100">
+                        <h6 className="font-medium text-purple-900">
+                          {day.accommodation.name || day.accommodation}
+                        </h6>
+                        {day.accommodation.type && (
+                          <p className="text-sm text-purple-700 mt-1">
+                            Type: {day.accommodation.type}
+                          </p>
+                        )}
+                        {day.accommodation.rating && (
+                          <p className="text-sm text-purple-700">
+                            Rating: {day.accommodation.rating}
+                          </p>
+                        )}
+                        {day.accommodation.description && (
+                          <p className="text-sm text-purple-600 mt-2">
+                            {day.accommodation.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* No Content Fallback */}
+              {(!day.destinations || day.destinations.length === 0) && 
+               (!day.places || day.places.length === 0) && 
+               (!day.activities || day.activities.length === 0) && 
+               !day.accommodation && (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-gray-500">
+                    <FaMapMarkerAlt className="mx-auto h-8 w-8 mb-3 text-gray-400" />
+                    <h6 className="font-medium text-gray-700 mb-2">Itinerary Details Coming Soon</h6>
+                    <p className="text-sm">
+                      Detailed destinations, activities, and accommodation information 
+                      will be available once you book this tour.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function TourDetailsModal({ tourId, isOpen, onClose }) {
   const { fetchTourById, loading } = useTours();
@@ -58,18 +314,133 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
       console.log('Complete tour data:', result.data); // Debug log
       console.log('Itinerary data:', result.data.itineraryDays); // Debug log
       
+      // Enhanced mapping to handle different API response structures
+      let itineraryData = [];
+      
+      // Get tour-level data for distribution across days
+      const tourActivities = result.data.activities || [];
+      const tourAccommodations = result.data.accommodations || [];
+      const tourHighlights = result.data.highlights || [];
+      
+      // Try different possible sources for itinerary data
+      if (result.data.itinerary && Array.isArray(result.data.itinerary)) {
+        itineraryData = result.data.itinerary.map((day, index) => {
+          // Distribute tour-level accommodations across days (except last day)
+          const dayAccommodation = index < tourAccommodations.length ? 
+            tourAccommodations[index] : 
+            (index < result.data.itinerary.length - 1 && tourAccommodations.length > 0 ? 
+              tourAccommodations[index % tourAccommodations.length] : null);
+          
+          // Distribute activities across days
+          const activitiesPerDay = Math.ceil(tourActivities.length / result.data.itinerary.length);
+          const dayActivities = tourActivities.slice(
+            index * activitiesPerDay, 
+            (index + 1) * activitiesPerDay
+          );
+          
+          // Add some of the tour highlights as activities for this day
+          const highlightsForDay = tourHighlights.filter((_, hIndex) => 
+            hIndex % result.data.itinerary.length === index
+          );
+          
+          return {
+            day: day.dayNumber || day.day || index + 1,
+            title: day.title || day.name || `Day ${day.dayNumber || day.day || index + 1}`,
+            description: day.description || day.details || '',
+            destinations: Array.isArray(day.destinations) ? 
+              day.destinations.map(dest => ({
+                name: dest.name || dest,
+                description: dest.description || '',
+                type: dest.type || 'Tourist attraction'
+              })) : 
+              (day.destinations ? [{ name: day.destinations, type: 'Tourist attraction' }] : []),
+            activities: [
+              ...dayActivities.map(activity => ({
+                name: activity.name || activity,
+                description: activity.description || `Experience ${activity.name || activity} in ${day.title}`,
+                duration: activity.duration || '2-3 hours'
+              })),
+              ...highlightsForDay.map(highlight => ({
+                name: highlight,
+                description: `${highlight} - one of the tour highlights`,
+                duration: '1-2 hours'
+              }))
+            ],
+            places: Array.isArray(day.destinations) ? 
+              day.destinations.map(dest => ({ name: dest.name || dest })) : 
+              (day.destinations ? [{ name: day.destinations }] : []),
+            accommodation: dayAccommodation ? {
+              name: dayAccommodation.title || dayAccommodation.name || dayAccommodation,
+              type: dayAccommodation.type || 'Hotel',
+              rating: dayAccommodation.rating || '4-star',
+              description: dayAccommodation.description || `Comfortable accommodation for ${day.title}`
+            } : null,
+            transportMode: index === 0 ? 'Airport transfer & Private vehicle' : 
+                          index === result.data.itinerary.length - 1 ? 'Private vehicle to airport' : 
+                          'Private tour vehicle',
+            estimatedTime: '6-8 hours of activities'
+          };
+        });
+      } else if (result.data.itineraryDays && Array.isArray(result.data.itineraryDays)) {
+        // Fallback to itineraryDays format
+        itineraryData = result.data.itineraryDays.map((day, index) => ({
+          day: day.dayNumber || day.day || index + 1,
+          title: day.title || day.name || `Day ${day.dayNumber || day.day || index + 1}`,
+          description: day.description || day.details || '',
+          activities: Array.isArray(day.activities) ? day.activities : (day.activities ? [day.activities] : []),
+          places: Array.isArray(day.places) ? day.places : (day.places ? [day.places] : []),
+          destinations: Array.isArray(day.destinations) ? day.destinations : (day.destinations ? [day.destinations] : []),
+          accommodation: day.accommodation || day.hotel || day.lodging || null,
+          transportMode: day.transportMode || day.transport || '',
+          estimatedTime: day.estimatedTime || day.duration || ''
+        }));
+      } else if (result.data.duration && result.data.duration > 0) {
+        // Generate enhanced sample itinerary based on tour data
+        const duration = parseInt(result.data.durationValue) || parseInt(result.data.duration) || 1;
+        const tourName = result.data.name || result.data.title || 'Tour';
+        
+        itineraryData = Array.from({ length: duration }, (_, index) => ({
+          day: index + 1,
+          title: index === 0 ? `Arrival & ${tourName} Begins` : 
+                 index === duration - 1 ? `Final Day & Departure` : 
+                 `${tourName} - Day ${index + 1}`,
+          description: index === 0 ? `Begin your exciting ${tourName} journey with arrival and orientation.` :
+                      index === duration - 1 ? `Conclude your amazing ${tourName} experience and prepare for departure.` :
+                      `Continue exploring the highlights of ${tourName} with today's planned activities and destinations.`,
+          activities: tourActivities.length > 0 ? 
+            tourActivities.slice(index * Math.ceil(tourActivities.length / duration), (index + 1) * Math.ceil(tourActivities.length / duration)).map(activity => ({
+              name: activity.name || activity,
+              description: `Experience ${activity.name || activity}`,
+              duration: '2-3 hours'
+            })) :
+            [
+              { name: `Guided tour activities for day ${index + 1}`, description: 'Professional guided experience', duration: '3-4 hours' },
+              { name: `Local cultural experiences`, description: 'Immerse in local culture', duration: '2-3 hours' },
+              { name: `Sightseeing and exploration`, description: 'Discover amazing sights', duration: '2-3 hours' }
+            ],
+          places: [{ name: `Key destination ${index + 1}`, description: `Important location for day ${index + 1}` }],
+          destinations: [{ name: `Primary destination for day ${index + 1}`, type: 'Tourist attraction' }],
+          accommodation: index < duration - 1 && tourAccommodations.length > 0 ? 
+            tourAccommodations[index % tourAccommodations.length] ? {
+              name: tourAccommodations[index % tourAccommodations.length].title || tourAccommodations[index % tourAccommodations.length].name,
+              type: 'Hotel',
+              rating: '4-star',
+              description: tourAccommodations[index % tourAccommodations.length].description || 'Comfortable accommodation with modern amenities'
+            } : {
+              name: `${tourName} Hotel - Day ${index + 1}`,
+              type: 'Hotel',
+              rating: '4-star',
+              description: 'Comfortable accommodation with modern amenities'
+            } : null,
+          transportMode: index === 0 ? 'Airport transfer' : 'Tour bus',
+          estimatedTime: '6-8 hours'
+        }));
+      }
+      
       // Map the API response to match frontend expectations
       const mappedTour = {
         ...result.data,
-        // Map itineraryDays to itinerary with correct structure
-        itinerary: result.data.itineraryDays?.map(day => ({
-          day: day.dayNumber,
-          title: day.title,
-          description: day.description,
-          activities: day.activities || [],
-          meals: day.meals || [],
-          places: day.places || []
-        })) || []
+        itinerary: itineraryData
       };
       
       setTour(mappedTour);
@@ -306,50 +677,11 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
                     <div className="space-y-6">
                       <h3 className="text-xl font-bold text-gray-800 mb-4">Detailed Itinerary</h3>
                       {tour.itinerary && tour.itinerary.length > 0 ? (
-                        <div className="space-y-4">
-                          {tour.itinerary.map((day, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4">
-                              <h4 className="font-semibold text-gray-800 mb-2">
-                                Day {day.day}: {day.title}
-                              </h4>
-                              <p className="text-gray-700 mb-3">{day.description}</p>
-                              
-                              {/* Places */}
-                              {day.places && day.places.length > 0 && (
-                                <div className="mb-3">
-                                  <h5 className="font-medium text-gray-800">Places to Visit:</h5>
-                                  <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                    {day.places.map((place, placeIndex) => (
-                                      <li key={placeIndex}>{place.name || place}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                              
-                              {/* Activities */}
-                              {day.activities && day.activities.length > 0 && (
-                                <div className="mb-3">
-                                  <h5 className="font-medium text-gray-800">Activities:</h5>
-                                  <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                    {day.activities.map((activity, actIndex) => (
-                                      <li key={actIndex}>{activity.name || activity}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                              
-                              {/* Meals */}
-                              {day.meals && day.meals.length > 0 && (
-                                <div className="text-sm text-gray-600">
-                                  <strong>Meals:</strong> {day.meals.map(meal => meal.name || meal).join(', ')}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                        <ExpandableItinerary itinerary={tour.itinerary} />
                       ) : (
                         <div className="text-center py-8 text-gray-500">
-                          <p>Detailed itinerary information will be provided upon booking.</p>
+                          <p>Itinerary details are being loaded...</p>
+                          <p className="text-sm mt-2">If no itinerary appears, it may not be available for this tour.</p>
                         </div>
                       )}
                     </div>

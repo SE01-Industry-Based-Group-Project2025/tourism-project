@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/feedback/useToast';
 import { Button } from '../../components/ui/Button';
 import PageHeader from '../../components/ui/PageHeader';
 import ContentCard from '../../components/ui/ContentCard';
@@ -11,6 +12,7 @@ const BookingSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getAuthHeaders } = useAuth();
+  const toast = useToast();
   const [bookingId, setBookingId] = useState(null);
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,9 @@ const BookingSuccess = () => {
   };
 
   useEffect(() => {
+    // Show success toast when page loads
+    toast.success('🎉 Booking confirmed successfully! Your adventure awaits!');
+    
     // Get session ID from URL params (optional)
     const sessionId = searchParams.get('session_id');
     
