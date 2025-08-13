@@ -279,6 +279,7 @@ const Places = () => {
               selectedRegion={selectedRegion}
               onChange={setSelectedRegion}
             />
+            
             <div className="flex-1 w-full sm:w-auto">
               <SearchBar searchTerm={searchTerm} onChange={setSearchTerm} />
             </div>
