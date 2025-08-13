@@ -23,7 +23,8 @@ import {NavLink, useLocation} from "react-router-dom"; // Import NavLink and use
 
 const navItems = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/tours", label: "Tours", icon: Map },
+  { to: "/admin/templates", label: "Templates", icon: Map },
+  { to: "/admin/tours", label: "Tours", icon: Compass },
   { to: "/admin/places", label: "Places", icon: MapPin },
   { to: "/admin/quote-requests", label: "Quote Requests", icon: MessageSquareQuote },
   { to: "/admin/users", label: "Users", icon: Users },

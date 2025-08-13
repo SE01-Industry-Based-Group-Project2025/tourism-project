@@ -7,12 +7,16 @@ import TourFilterBar from "../components/tours/TourFilterBar";
 import TourTable from "../components/tours/TourTable";
 import PaginationControls from "../components/ui/PaginationControls";
 import { Button } from "../components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Tours() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getAuthHeaders } = useAuth();
+  
+  // Determine if we're in templates mode based on the route
+  const isTemplateMode = location.pathname.includes('/templates');
   
   // API state
   const [tours, setTours] = useState([]);
@@ -35,7 +39,8 @@ export default function Tours() {
       setLoading(true);
       setError('');
       
-      console.log('Fetching tours from:', TOURS_API, `(attempt ${retryCount + 1})`);
+      console.log('🔄 Admin: Fetching tours from:', TOURS_API, `(attempt ${retryCount + 1})`);
+      console.log('🔐 Admin: Using auth headers:', !!getAuthHeaders());
       
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
@@ -140,7 +145,11 @@ export default function Tours() {
     status: tour.status.toLowerCase(),
     type: tour.category.toLowerCase(),
     rating: 4.5, // Default rating since backend doesn't provide this
-    participants: tour.availableSpots
+    participants: tour.availableSpots,
+    isTemplate: tour.isTemplate || false, // Include template flag
+    createdAt: tour.createdAt,
+    created_at: tour.created_at,
+    dateCreated: tour.dateCreated
   });
 
   // Transform tours data for UI
@@ -149,12 +158,25 @@ export default function Tours() {
   // Handlers
   const handleView = (id) => {
     console.log("View tour", id);
-    navigate(`/admin/tours/${id}`);
+    if (isTemplateMode) {
+      navigate(`/admin/templates/${id}`);
+    } else {
+      navigate(`/admin/tours/${id}`);
+    }
   };
 
   const handleEdit = (id) => {
     console.log("Edit tour", id);
-    navigate(`/admin/tours/${id}/edit`);
+    if (isTemplateMode) {
+      navigate(`/admin/templates/${id}/edit`);
+    } else {
+      navigate(`/admin/tours/${id}/edit`);
+    }
+  };
+
+  const handleCreateFromTemplate = (templateId) => {
+    console.log("Create tour from template", templateId);
+    navigate(`/admin/tours/new?fromTemplate=${templateId}`);
   };
 
   const handleDelete = async (id) => {
@@ -181,6 +203,14 @@ export default function Tours() {
           return b.id - a.id;
         }
       })
+      .filter((t) => {
+        // Filter by template mode - only show templates if in template mode, non-templates otherwise
+        if (isTemplateMode) {
+          return t.isTemplate === true;
+        } else {
+          return !t.isTemplate;
+        }
+      })
       .filter((t) =>
         t.title.toLowerCase().includes(searchValue.toLowerCase())
       )
@@ -190,15 +220,23 @@ export default function Tours() {
       .filter((t) =>
         typeValue === "all" ? true : t.type === typeValue
       );
-  }, [transformedTours, searchValue, statusValue, typeValue, loading]);
+  }, [transformedTours, searchValue, statusValue, typeValue, loading, isTemplateMode]);
 
-  // Calculate statistics from tours data
-  const activeTours = transformedTours.filter(tour => tour.status === 'incomplete' || tour.status === 'upcoming' || tour.status === 'started').length;
-  const totalParticipants = transformedTours.reduce((sum, tour) => sum + tour.participants, 0);
-  const averageRating = transformedTours.length > 0 
-    ? (transformedTours.reduce((sum, tour) => sum + tour.rating, 0) / transformedTours.length).toFixed(1)
+  // Calculate statistics from tours data - based on current mode (templates vs tours)
+  const relevantTours = transformedTours.filter(tour => {
+    if (isTemplateMode) {
+      return tour.isTemplate === true;
+    } else {
+      return !tour.isTemplate;
+    }
+  });
+  
+  const activeTours = relevantTours.filter(tour => tour.status === 'incomplete' || tour.status === 'upcoming' || tour.status === 'started').length;
+  const totalParticipants = relevantTours.reduce((sum, tour) => sum + tour.participants, 0);
+  const averageRating = relevantTours.length > 0 
+    ? (relevantTours.reduce((sum, tour) => sum + tour.rating, 0) / relevantTours.length).toFixed(1)
     : '0.0';
-  const totalRevenue = transformedTours.reduce((sum, tour) => {
+  const totalRevenue = relevantTours.reduce((sum, tour) => {
     const price = parseFloat(tour.price.replace('$', '').replace(',', '')) || 0;
     return sum + price;
   }, 0);
@@ -210,30 +248,47 @@ export default function Tours() {
   }, [filtered, currentPage]);  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
       <div className="space-y-8 p-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <span>Admin</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className={isTemplateMode ? "text-blue-600 font-semibold" : "text-purple-600 font-semibold"}>
+            {isTemplateMode ? "Templates" : "Tours"}
+          </span>
+        </div>
+        
         {/* Header */}
         <PageHeader
-          title="Tours Management"
-          subtitle="Manage tour packages and experiences across Sri Lanka"
+          title={isTemplateMode ? "Templates Management" : "Tours Management"}
+          subtitle={isTemplateMode 
+            ? "Manage tour templates to create reusable tour packages" 
+            : "Manage active tour packages and experiences across Sri Lanka"
+          }
           icon={({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
             </svg>
-          )}          action={
-            <Button 
-              onClick={() => navigate('/admin/tours/new')}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 transition-all duration-200"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Tour
-            </Button>
+          )}
+          action={
+            isTemplateMode ? (
+              <Button 
+                onClick={() => navigate('/admin/templates/new')}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Template
+              </Button>
+            ) : null
           }
         />
 
         {/* Stats Cards */}        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <StatsCard
-            title="Active Tours"
+            title={isTemplateMode ? "Active Templates" : "Active Tours"}
             value={activeTours.toString()}
             color="blue"
             icon={({ className }) => (
@@ -243,8 +298,8 @@ export default function Tours() {
             )}
           />
           <StatsCard
-            title="Total Participants"
-            value={totalParticipants.toString()}
+            title={isTemplateMode ? "Template Capacity" : "Total Participants"}
+            value={isTemplateMode ? relevantTours.length.toString() : totalParticipants.toString()}
             color="green"
             icon={({ className }) => (
               <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,7 +375,14 @@ export default function Tours() {
               </div>
             </div>
           ) : (
-            <TourTable tours={paginated} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
+            <TourTable 
+              tours={paginated} 
+              onView={handleView} 
+              onEdit={handleEdit} 
+              onDelete={handleDelete}
+              onCreateFromTemplate={handleCreateFromTemplate}
+              isTemplateMode={isTemplateMode}
+            />
           )}
         </ContentCard>        {/* Pagination */}
         <div className="flex justify-center">

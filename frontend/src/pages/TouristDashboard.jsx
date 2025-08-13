@@ -3,32 +3,54 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTours } from '../contexts/ToursContext';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useSearchParams, Link } from 'react-router-dom';
 import { FaPlane, FaMapMarkerAlt, FaCalendarAlt, FaStar, FaHeart, FaUser, FaCog, FaSignOutAlt, FaSearch, FaFilter, FaClock, FaUsers } from 'react-icons/fa';
 import TourDetailsModal from '../components/tours/TourDetailsModal';
 import AddNewTour from '../components/tours/AddNewTour';
+import ReceiptLink from '../components/ui/ReceiptLink';
 
 export default function TouristDashboard() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { tours, loading, error, fetchUpcomingTours, searchTours } = useTours();
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
   const banner = state?.loginMsg;
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Check for tab query parameter on component mount
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['dashboard', 'bookings', 'tours', 'profile'].includes(tabParam)) {
+      console.log('📍 Setting active tab from URL parameter:', tabParam);
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+  
+  // Debug activeTab changes
+  useEffect(() => {
+    console.log('📍 Active tab changed to:', activeTab);
+  }, [activeTab]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('');
   const [selectedTourId, setSelectedTourId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showTourModal, setShowTourModal] = useState(false);
 
   // Load tours on component mount
   useEffect(() => {
     const loadTours = async () => {
+      console.log('🔄 Loading tours in TouristDashboard...');
       const result = await fetchUpcomingTours();
       if (result.success) {
-        console.log('Loaded tours:', result.data);
-        console.log('Tours with Upcoming status:', result.data.filter(tour => 
+        console.log('✅ Loaded tours:', result.data);
+        console.log('📊 Total tours received:', result.data.length);
+        console.log('📊 All unique statuses:', [...new Set(result.data.map(tour => tour.status))]);
+        console.log('📊 Tours with Upcoming status:', result.data.filter(tour => 
           (tour.status || '').toLowerCase() === 'upcoming'
         ));
+      } else {
+        console.error('❌ Failed to load tours:', result.error);
       }
     };
     loadTours();
@@ -139,6 +161,88 @@ export default function TouristDashboard() {
       amount: 75
     }
   ]);
+
+  // Real bookings data
+  const [realBookings, setRealBookings] = useState([]);
+  const [customRequests, setCustomRequests] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+
+  // Fetch bookings when bookings tab is active
+  useEffect(() => {
+    console.log('🔄 useEffect triggered - activeTab:', activeTab, 'token exists:', !!token);
+    
+    if (activeTab === 'bookings' && token) {
+      console.log('✅ Conditions met - fetching bookings');
+      const fetchBookings = async () => {
+        setBookingsLoading(true);
+        try {
+          console.log('🔄 Fetching bookings for user:', user?.email);
+          
+          const [bookingsRes, customRes] = await Promise.all([
+            fetch('http://localhost:8080/api/bookings/my-bookings', {
+              headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }),
+            fetch('http://localhost:8080/api/tours/my-custom-tours', {
+              headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            })
+          ]);
+
+          console.log('✅ Bookings response status:', bookingsRes.status);
+          console.log('✅ Custom requests response status:', customRes.status);
+
+          if (bookingsRes.ok) {
+            const bookingsData = await bookingsRes.json();
+            console.log('✅ Bookings data:', bookingsData);
+            console.log('✅ Bookings content array:', bookingsData.content);
+            console.log('✅ Number of bookings found:', bookingsData.content?.length || 0);
+            console.log('✅ First booking structure:', bookingsData.content?.[0]);
+            // Extract the content array from the paginated response
+            setRealBookings(bookingsData.content || []);
+          }
+          
+          if (customRes.ok) {
+            const customData = await customRes.json();
+            console.log('✅ Custom requests data:', customData);
+            console.log('✅ Number of custom requests found:', customData.length);
+            console.log('✅ Raw custom data structure:', JSON.stringify(customData, null, 2));
+            
+            // Filter for custom tours - handle different field names and values
+            const customTours = Array.isArray(customData) ? customData.filter(tour => {
+              // Check for different possible field names and values
+              const isCustom = tour.is_custom === 1 || 
+                              tour.is_custom === true || 
+                              tour.isCustom === true || 
+                              tour.category === "Custom Tour Request";
+              console.log('🔍 Tour:', tour.name, 'isCustom check:', {
+                is_custom: tour.is_custom,
+                isCustom: tour.isCustom,
+                category: tour.category,
+                result: isCustom
+              });
+              return isCustom;
+            }) : customData;
+            console.log('✅ Filtered custom tours:', customTours);
+            console.log('✅ Setting customRequests to:', customTours.length, 'items');
+            
+            setCustomRequests(customTours);
+          } else {
+            console.error('❌ Failed to fetch custom requests:', customRes.status, customRes.statusText);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching bookings:', error);
+        } finally {
+          setBookingsLoading(false);
+        }
+      };
+      fetchBookings();
+    }
+  }, [activeTab, token]);
 
   const renderDashboardContent = () => (
     <div className="space-y-8">
@@ -349,67 +453,238 @@ export default function TouristDashboard() {
     </div>
   );
 
-  const renderBookingsContent = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">My Bookings History</h2>
-        <div className="space-y-4">
-          {recentBookings.map(booking => (
-            <div key={booking.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition duration-200">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 text-lg">{booking.title}</h3>
-                <p className="text-gray-600 text-sm flex items-center mt-1">
-                  <FaCalendarAlt className="mr-1" />
-                  {booking.date}
-                </p>
-                <div className="flex items-center mt-2">
-                  {[...Array(5)].map((_, i) => (
-                    <FaStar
-                      key={i}
-                      className={i < booking.rating ? 'text-yellow-400' : 'text-gray-300'}
-                    />
-                  ))}
-                  <span className="ml-2 text-sm text-gray-600">Your Rating</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800 text-lg">${booking.amount}</p>
-                <span className="text-green-600 text-sm font-medium">{booking.status}</span>
-              </div>
-            </div>
-          ))}
+  const renderBookingsContent = () => {
+    if (bookingsLoading) {
+      return (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-2">Loading bookings...</p>
         </div>
-      </div>
+      );
+    }
 
-      {/* Upcoming Trips in Bookings */}
-      <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Upcoming Trips</h2>
-        <div className="space-y-4">
-          {upcomingTrips.map(trip => (
-            <div key={trip.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-              <img src={trip.image} alt={trip.title} className="w-20 h-20 rounded-lg object-cover" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 text-lg">{trip.title}</h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                  <span>📅 {trip.date}</span>
-                  <span>⏱️ {trip.duration}</span>
-                  <span>👨‍🦱 {trip.guide}</span>
+    return (
+      <div className="space-y-6">
+        {/* Real Bookings */}
+        <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">My Tour Bookings</h2>
+          {(() => {
+            console.log('🎯 Rendering bookings - realBookings length:', realBookings.length);
+            console.log('🎯 Rendering bookings - realBookings content:', realBookings);
+            return null;
+          })()}
+          {realBookings.length > 0 ? (
+            <div className="space-y-4">
+              {realBookings.map(booking => (
+                <div 
+                  key={booking.id} 
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group"
+                  onClick={() => {
+                    setSelectedTourId(booking.tourId);
+                    setShowTourModal(true);
+                  }}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">
+                        {booking.tourName || booking.title || booking.name}
+                      </h3>
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600 text-sm flex items-center mt-1">
+                      <FaCalendarAlt className="mr-1" />
+                      {booking.selectedDate || booking.date || new Date(booking.createdAt || booking.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      Guests: {booking.guestCount || 1} • Booking #{booking.id}
+                    </p>
+                    <div className="mt-2 flex items-center gap-4">
+                      <p className="text-blue-600 text-xs group-hover:text-blue-700">
+                        Click to view tour details →
+                      </p>
+                      {(() => {
+                        const hasReceipt = booking?.status === 'CONFIRMED' && booking?.payment?.receiptUrl;
+                        if (hasReceipt) {
+                          return (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ReceiptLink url={booking.payment.receiptUrl} size="sm" />
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-800 text-lg">${booking.totalAmount || booking.amount || booking.price}</p>
+                    <span className="text-green-600 text-sm font-medium">{booking.status}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800">${trip.price}</p>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  trip.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {trip.status}
-                </span>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No bookings found.</p>
+              <button onClick={() => setActiveTab('tours')} className="text-blue-600 hover:text-blue-800 mt-2">
+                Browse available tours
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Custom Requests */}
+        <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800 mb-6">My Custom Tour Requests</h2>
+          {customRequests.length > 0 ? (
+            <div className="space-y-4">
+              {customRequests.map(request => (
+                <div key={request.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition duration-200 bg-white">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-4">
+                        <h3 className="font-bold text-gray-800 text-xl">{request.name}</h3>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          (request.status || '').toLowerCase().includes('approved') || (request.status || '').toLowerCase() === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          (request.status || '').toLowerCase().includes('pending') ? 'bg-yellow-100 text-yellow-800' :
+                          (request.status || '').toLowerCase().includes('rejected') || (request.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {request.status?.replace('_', ' ') || 'Pending Approval'}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mb-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <FaClock className="text-blue-500 text-sm" />
+                            <span className="font-semibold text-gray-700">Duration:</span>
+                            <span className="text-gray-600">{request.duration || (request.durationValue ? `${request.durationValue} ${request.durationUnit}` : 'Not specified')}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-500 text-sm">💰</span>
+                            <span className="font-semibold text-gray-700">Budget:</span>
+                            <span className="text-gray-600">${request.budget || request.price || 'Not specified'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FaUsers className="text-purple-500 text-sm" />
+                            <span className="font-semibold text-gray-700">Group Size:</span>
+                            <span className="text-gray-600">{request.group_size || request.availableSpots || 'Not specified'} people</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-red-500 text-sm" />
+                            <span className="font-semibold text-gray-700">Region:</span>
+                            <span className="text-gray-600">{request.region || 'Not specified'}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <FaCalendarAlt className="text-blue-500 text-sm" />
+                            <span className="font-semibold text-gray-700">Requested:</span>
+                            <span className="text-gray-600">{new Date(request.created_at || request.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-500 text-sm">📞</span>
+                            <span className="font-semibold text-gray-700">Phone:</span>
+                            <span className="text-gray-600">{request.phone || request.createdBy?.phone || 'Not provided'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-500 text-sm">📧</span>
+                            <span className="font-semibold text-gray-700">Email:</span>
+                            <span className="text-gray-600">{request.email || request.createdBy?.email || 'Not provided'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-orange-500 text-sm">🏷️</span>
+                            <span className="font-semibold text-gray-700">Type:</span>
+                            <span className="text-gray-600">{request.category || 'Custom Tour'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {(request.requirements || request.shortDescription) && (
+                        <div className="mb-6">
+                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="text-blue-500">📝</span>
+                            Description & Requirements
+                          </h4>
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md">
+                            <p className="text-gray-700 leading-relaxed">{request.requirements || request.shortDescription}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {(request.activities && request.activities.length > 0) && (
+                        <div className="mb-4">
+                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="text-green-500">🎯</span>
+                            Selected Activities
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {request.activities.map((activity, index) => (
+                              <span key={index} className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm font-medium border border-blue-300 shadow-sm">
+                                {activity}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {request.admin_response && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="font-semibold text-blue-800 mb-2">Admin Response:</p>
+                      <p className="text-blue-700">{request.admin_response}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No custom requests found.</p>
+              <button onClick={() => setActiveTab('custom-tour')} className="text-blue-600 hover:text-blue-800 mt-2">
+                Create custom request
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Mock Data Fallback */}
+        {realBookings.length === 0 && customRequests.length === 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Recent Bookings (Demo)</h2>
+            <div className="space-y-4">
+              {recentBookings.map(booking => (
+                <div key={booking.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition duration-200">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800 text-lg">{booking.title}</h3>
+                    <p className="text-gray-600 text-sm flex items-center mt-1">
+                      <FaCalendarAlt className="mr-1" />
+                      {booking.date}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      {[...Array(5)].map((_, i) => (
+                        <FaStar
+                          key={i}
+                          className={i < booking.rating ? 'text-yellow-400' : 'text-gray-300'}
+                        />
+                      ))}
+                      <span className="ml-2 text-sm text-gray-600">Your Rating</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-800 text-lg">${booking.amount}</p>
+                    <span className="text-green-600 text-sm font-medium">{booking.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderProfileContent = () => (
     <div className="space-y-6">
@@ -996,6 +1271,13 @@ export default function TouristDashboard() {
         tourId={selectedTourId}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* Tour Details Modal for Bookings */}
+      <TourDetailsModal
+        tourId={selectedTourId}
+        isOpen={showTourModal}
+        onClose={() => setShowTourModal(false)}
       />
     </div>
   );

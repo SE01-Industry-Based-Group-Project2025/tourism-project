@@ -17,7 +17,7 @@ export const ToursProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // API base URLs - try proxy first, fallback to direct localhost
+  // API base URLs - Spring Boot backend on 8080, React on 5173
   const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8080/api' : '/api';
   const TOURS_API = `${API_BASE}/tours`;
 
@@ -29,6 +29,10 @@ export const ToursProvider = ({ children }) => {
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      console.log('🔄 Fetching tours from:', `${TOURS_API}?status=Upcoming`);
+      console.log('🔐 Using token:', token ? 'Yes' : 'No');
+      console.log('📡 Making request to:', `${TOURS_API}?status=Upcoming`);
       
       const response = await fetch(`${TOURS_API}?status=Upcoming`, {
         method: 'GET',
@@ -42,7 +46,8 @@ export const ToursProvider = ({ children }) => {
       });
 
       clearTimeout(timeoutId);
-      console.log('Tours API response status:', response.status);
+      console.log('✅ Tours API response status:', response.status);
+      console.log('✅ Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();

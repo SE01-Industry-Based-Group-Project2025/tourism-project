@@ -27,6 +27,7 @@ import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import TouristDashboard from './pages/TouristDashboard';
+import { bookingRoutes } from './routes/bookingRoutes';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -121,6 +122,10 @@ export default function App() {
           }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="templates" element={<Tours />} />
+          <Route path="templates/new" element={<AddTour />} />
+          <Route path="templates/:id" element={<TourView />} />
+          <Route path="templates/:id/edit" element={<TourEdit />} />
           <Route path="tours" element={<Tours />} />
           <Route path="tours/new" element={<AddTour />} />
           <Route path="tours/:id" element={<TourView />} />
@@ -131,6 +136,9 @@ export default function App() {
           <Route path="reviews" element={<Reviews />} />
           <Route path="analytics" element={<Analytics />} />
         </Route>
+
+        {/* Booking routes - protected for authenticated users */}
+        {bookingRoutes}
 
         {/* Fallback: if someone tries anything else */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import ContentCard from '../components/ui/ContentCard';
+import QuickBookingCard from '../features/booking/QuickBookingCard';
 import { ArrowLeft, Edit3, Trash2, MapPin, Clock, Users, Star, DollarSign } from 'lucide-react';
 
 export default function TourView() {
@@ -351,6 +352,9 @@ export default function TourView() {
                 </div>
               </div>
             </ContentCard>
+
+            {/* Quick Booking Card for non-template tours */}
+            <QuickBookingCard tour={tour} />
 
             {/* Meta Information */}
             <ContentCard>

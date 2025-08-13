@@ -61,7 +61,7 @@ const difficultyLevels = ["Easy", "Moderate", "Challenging"];
 
 const availableActivities = ["Hiking", "Snorkeling", "City Tour", "Cooking Class", "Museum Visit", "Wildlife Safari", "Cultural Show", "Yoga Session", "Kayaking", "Surfing", "Temple Visit", "Tea Plantation Tour"];
 
-export default function AddNewTour({ onClose, mode = 'admin' }) {
+export default function AddNewTour({ onClose, mode = 'admin', isTemplate = false, fromTemplateId = null }) {
   const steps = mode === 'tourist' 
     ? [
         { id: 1, name: 'Basic Info' },
@@ -212,10 +212,82 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
     };
 
     if (getAuthHeaders) {
-      fetchActivities(selectedRegions); // Pass current selected regions
+      fetchActivities([]); // Start with empty regions array
       fetchPlaces();
     }
-  }, [getAuthHeaders, mode, tourCategory, startDate, endDate, selectedRegions, fetchActivities]);
+  }, [getAuthHeaders, mode]); // Fixed: Removed problematic dependencies that cause infinite loops
+
+  // Separate useEffect for handling region changes
+  useEffect(() => {
+    if (selectedRegions.length > 0 && getAuthHeaders) {
+      fetchActivities(selectedRegions);
+    }
+  }, [selectedRegions]); // Only trigger when selected regions change
+
+  // useEffect for loading template data when creating tour from template
+  useEffect(() => {
+    const loadTemplateData = async () => {
+      if (!fromTemplateId || !getAuthHeaders) {
+        console.log('❌ Template loading skipped:', { fromTemplateId, hasAuthHeaders: !!getAuthHeaders });
+        return;
+      }
+
+      console.log('🔄 Loading template data for ID:', fromTemplateId);
+      console.log('📡 API URL:', `${TOURS_API}/${fromTemplateId}`);
+      console.log('🔐 Auth headers:', getAuthHeaders());
+      
+      try {
+        const res = await fetch(`${TOURS_API}/${fromTemplateId}`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+
+        console.log('📡 Template API response status:', res.status);
+
+        if (res.ok) {
+          const template = await res.json();
+          console.log('✅ Loaded template data:', template);
+
+          // Prefill form with template data
+          setTourName(template.name || '');
+          setTourCategory(template.category || '');
+          setDurationValue(template.durationValue?.toString() || template.duration?.value?.toString() || '');
+          setDurationUnit(template.durationUnit || template.duration?.unit || durationUnits[0]);
+          setShortDescription(template.shortDescription || template.description || '');
+          setHighlights(template.highlights && Array.isArray(template.highlights) ? template.highlights : ['']);
+          setDifficulty(template.difficulty || difficultyLevels[0]);
+          setSelectedRegions(template.regions && Array.isArray(template.regions) ? template.regions : []);
+          setSelectedActivities(template.activities && Array.isArray(template.activities) ? template.activities : []);
+          setItineraryDays(template.itineraryDays && Array.isArray(template.itineraryDays) ? template.itineraryDays : []);
+          setAccommodations(template.accommodations && Array.isArray(template.accommodations) ? template.accommodations : []);
+          
+          // Handle images if they exist
+          if (template.images && Array.isArray(template.images)) {
+            const formattedImages = template.images.map((img, index) => ({
+              id: `template-img-${index}`,
+              preview: img.url || img.preview || img,
+              isPrimary: img.isPrimary || index === 0,
+              file: null // Template images don't have file objects
+            }));
+            setUploadedImages(formattedImages);
+          }
+
+          console.log('✅ Template data successfully populated into form');
+
+          // Don't prefill pricing and availability for templates
+          // These should be filled fresh for each real tour
+        } else {
+          console.error('❌ Failed to load template:', res.status, res.statusText);
+          const errorText = await res.text();
+          console.error('Error response:', errorText);
+        }
+      } catch (err) {
+        console.error('❌ Error loading template:', err);
+      }
+    };
+
+    loadTemplateData();
+  }, [fromTemplateId, getAuthHeaders]);
 
   const handleNext = () => {
     if (currentStep < steps.length) {
@@ -778,61 +850,147 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
       return;
     }
 
-    // Admin mode validation (existing logic)
+    // Admin mode validation (existing logic with template support)
     if (!tourCategory) {
       alert('Please select a tour category.');
       return;
     }
 
-    // Debug log individual state values
-    console.log('Publishing tour with values:', {
+    // Template mode has relaxed validation - certain fields are optional
+    if (!isTemplate) {
+      // Full tour validation - all fields are required
+      if (!pricePerPerson || pricePerPerson <= 0) {
+        alert('Please provide a valid price per person.');
+        return;
+      }
+
+      if (!availableSpots || availableSpots <= 0) {
+        alert('Please specify available spots.');
+        return;
+      }
+
+      if (availabilityRanges.length === 0) {
+        alert('Please add at least one availability date range.');
+        return;
+      }
+    }
+
+    // Debug log individual state values before constructing payload
+    console.log('🔍 Individual state values:', {
       tourName,
       tourCategory,
       durationValue,
       durationUnit,
+      shortDescription,
+      highlights,
       difficulty,
       selectedRegions,
       selectedActivities,
+      pricePerPerson,
+      availableSpots,
+      isTemplate,
+      fromTemplateId,
+      itineraryDays: itineraryDays.length,
+      accommodations: accommodations.length,
+      availabilityRanges: availabilityRanges.length,
+      uploadedImages: uploadedImages.length
     });
 
+    // Construct complete payload with ALL available fields
     const tourData = {
+      // Basic Info Fields
       name: tourName.trim(),
       category: tourCategory,
       durationValue: parseInt(durationValue) || 1,
       durationUnit: durationUnit.toUpperCase(),
       shortDescription: shortDescription.trim(),
+      longDescription: shortDescription.trim(), // Using shortDescription as longDescription for now
       highlights: highlights.filter(h => h.trim()).map(h => h.trim()),
       difficulty: difficulty,
+      
+      // Location Fields
       region: selectedRegions.length > 0 ? selectedRegions[0] : '', // Backend expects single region
       regions: selectedRegions, // Keep regions array for backend
+      
+      // Activity Fields
       activities: selectedActivities,
-      availableSpots: parseInt(availableSpots) || 1,
-      status: "UPCOMING", // Changed from INCOMPLETE to UPCOMING
+      
+      // Status and Type Fields
+      availableSpots: isTemplate ? 0 : (parseInt(availableSpots) || 1), // Set to 0 for templates
+      status: "UPCOMING",
       isCustom: false,
+      isTemplate: isTemplate && !fromTemplateId, // If fromTemplateId is provided, save as regular tour, not template
+      
+      // Pricing Fields
+      price: isTemplate ? 0.0 : (parseFloat(pricePerPerson) || 0.0), // Set to 0 for templates
+      pricingTiers: [], // Empty array for now - add this field for future use
+      
+      // Itinerary Fields (with proper structure)
       itineraryDays: itineraryDays.map((day, index) => ({
         dayNumber: index + 1,
         title: day.title.trim(),
         description: day.description.trim(),
         imageUrl: day.imagePreview === 'https://placehold.co/600x400.png' ? null : day.imagePreview,
-        destinations: day.selectedDestinations
+        destinations: day.selectedDestinations || []
       })),
+      
+      // Accommodation Fields (with proper structure)
       accommodations: accommodations.map(acc => ({
         title: acc.title.trim(),
         description: acc.description.trim(),
         images: acc.images || []
       })),
-      price: parseFloat(pricePerPerson) || 0.0,
-      availabilityRanges: availabilityRanges.map(range => ({
+      
+      // Availability Fields (empty array for templates)
+      availabilityRanges: isTemplate ? [] : availabilityRanges.map(range => ({
         startDate: range.startDate,
         endDate: range.endDate
       })),
+      
+      // Media Fields (with proper structure)
       images: uploadedImages.map(img => ({
         url: img.preview,
         isPrimary: img.isPrimary || false
-      }))
+      })),
+      
+      // Additional metadata
+      createdDate: new Date().toISOString(),
+      lastModified: new Date().toISOString()
     };
 
-    console.log('Final tourData being sent to backend:', tourData);
+    // ✅ COMPREHENSIVE PAYLOAD VERIFICATION - Log all fields being sent to backend
+    console.log('📤 Publishing tour with COMPLETE payload:', tourData);
+    console.log('🔍 Payload structure verification:');
+    console.log('  📝 Basic Info:', {
+      name: tourData.name,
+      category: tourData.category,
+      duration: `${tourData.durationValue} ${tourData.durationUnit}`,
+      shortDescription: tourData.shortDescription?.length || 0,
+      longDescription: tourData.longDescription?.length || 0,
+      highlights: tourData.highlights?.length || 0,
+      difficulty: tourData.difficulty
+    });
+    console.log('  🌍 Location & Activities:', {
+      region: tourData.region,
+      regions: tourData.regions?.length || 0,
+      activities: tourData.activities?.length || 0
+    });
+    console.log('  💰 Pricing & Availability:', {
+      price: tourData.price,
+      availableSpots: tourData.availableSpots,
+      pricingTiers: tourData.pricingTiers?.length || 0,
+      availabilityRanges: tourData.availabilityRanges?.length || 0
+    });
+    console.log('  📅 Itinerary & Accommodations:', {
+      itineraryDays: tourData.itineraryDays?.length || 0,
+      accommodations: tourData.accommodations?.length || 0
+    });
+    console.log('  🖼️ Media & Metadata:', {
+      images: tourData.images?.length || 0,
+      isTemplate: tourData.isTemplate,
+      status: tourData.status,
+      createdDate: tourData.createdDate
+    });
     console.log('Region field specifically:', tourData.region);
     console.log('Regions array:', tourData.regions);
 
@@ -862,20 +1020,20 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
         try {
           const errorJson = JSON.parse(errorData);
           console.error('Parsed error:', errorJson);
-          alert(`Failed to publish tour: ${errorJson.message || errorJson.error || 'Unknown error'}`);
+          alert(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}: ${errorJson.message || errorJson.error || 'Unknown error'}`);
         } catch {
-          alert(`Failed to publish tour. Status: ${res.status}. Response: ${errorData}`);
+          alert(`Failed to ${fromTemplateId ? 'publish tour from template' : isTemplate ? 'save template' : 'publish tour'}. Status: ${res.status}. Response: ${errorData}`);
         }
         return;
       }
       
       const responseData = await res.json();
       console.log('Success response:', responseData);
-      alert('Tour published successfully');
+      alert(fromTemplateId ? 'Tour published from template successfully!' : isTemplate ? 'Template saved successfully' : 'Tour published successfully');
       if (onClose) onClose();
     } catch (err) {
       console.error('Publish tour error', err);
-      alert('Error publishing tour: ' + err.message);
+      alert(`Error ${fromTemplateId ? 'publishing tour from template' : isTemplate ? 'saving template' : 'publishing tour'}: ` + err.message);
     }
   };
 
@@ -986,10 +1144,10 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
       },
       completionStatus: {
         basicInfoComplete: !!(tourName && tourCategory && durationValue && difficulty && selectedRegions.length > 0),
-        pricingComplete: !!(pricePerPerson && availableSpots),
+        pricingComplete: isTemplate ? true : !!(pricePerPerson && availableSpots), // Always complete for templates
         itineraryComplete: itineraryDays.length > 0,
         accommodationComplete: accommodations.length > 0,
-        availabilityComplete: availabilityRanges.length > 0,
+        availabilityComplete: isTemplate ? true : availabilityRanges.length > 0, // Always complete for templates
         mediaComplete: uploadedImages.length > 0 && uploadedImages.some(img => img.isPrimary)
       }
     };
@@ -999,9 +1157,30 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
       <div className="flex items-center justify-between mb-8 p-6 bg-gradient-to-r from-blue-50/50 via-purple-50/30 to-blue-50/50 rounded-2xl border border-blue-100/50">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-700 via-purple-600 to-blue-700 bg-clip-text text-transparent">
-            Create New Tour
+            {fromTemplateId ? 'Create Tour from Template' : isTemplate ? 'Create New Template' : mode === 'tourist' ? 'Create Custom Tour Request' : 'Create New Tour'}
           </h1>
-          <p className="text-gray-600 mt-2 font-medium">Build your perfect tour experience step by step</p>
+          {isTemplate && !fromTemplateId && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Template Mode - Price & Availability Optional
+            </div>
+          )}
+          {fromTemplateId && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Creating from Template - Data Prefilled
+            </div>
+          )}
+          <p className="text-gray-600 mt-2 font-medium">
+            {isTemplate 
+              ? 'Create a reusable template for future tours' 
+              : 'Build your perfect tour experience step by step'
+            }
+          </p>
         </div>
         <div className="flex items-center space-x-3">
           <Button
@@ -1937,8 +2116,18 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Pricing & Availability</h2>
-                      <p className="text-gray-600 mt-1 font-medium">Set your tour price, available spots, and booking periods</p>
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Pricing & Availability
+                        {isTemplate && (
+                          <span className="ml-3 text-sm text-blue-600 font-normal">(Optional for Templates)</span>
+                        )}
+                      </h2>
+                      <p className="text-gray-600 mt-1 font-medium">
+                        {isTemplate 
+                          ? 'Set default pricing if desired, or leave empty for template use'
+                          : 'Set your tour price, available spots, and booking periods'
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2291,8 +2480,15 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
                   <div className="border-t border-gray-200 pt-8">
                     <div className="flex items-center justify-between mb-6">
                       <div>
-                        <h3 className="text-2xl font-bold text-gray-900">Tour Summary</h3>
-                        <p className="text-gray-600 mt-1">Review all details before publishing your tour</p>
+                        <h3 className="text-2xl font-bold text-gray-900">
+                          {isTemplate ? 'Template Summary' : 'Tour Summary'}
+                        </h3>
+                        <p className="text-gray-600 mt-1">
+                          {isTemplate 
+                            ? 'Review all details before saving your template' 
+                            : 'Review all details before publishing your tour'
+                          }
+                        </p>
                       </div>
                       <div className="flex items-center space-x-2 text-sm">
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -2621,7 +2817,14 @@ export default function AddNewTour({ onClose, mode = 'admin' }) {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  {mode === 'tourist' ? 'Submit Tour Request' : 'Publish Tour'}
+                  {mode === 'tourist' 
+                    ? 'Submit Tour Request' 
+                    : fromTemplateId
+                      ? 'Publish Tour from Template'
+                      : isTemplate 
+                        ? 'Save as Template' 
+                        : 'Publish Tour'
+                  }
                 </Button>
               )}</div>
           </CardContent>
