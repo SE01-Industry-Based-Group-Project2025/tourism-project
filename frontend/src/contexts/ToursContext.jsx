@@ -30,11 +30,17 @@ export const ToursProvider = ({ children }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      console.log('🔄 Fetching tours from:', `${TOURS_API}?status=Upcoming`);
-      console.log('🔐 Using token:', token ? 'Yes' : 'No');
-      console.log('📡 Making request to:', `${TOURS_API}?status=Upcoming`);
+      // Add filter to exclude templates for tourists
+      const queryParams = new URLSearchParams({
+        status: 'Upcoming',
+        isTemplate: 'false' // Exclude templates from tourist view
+      });
       
-      const response = await fetch(`${TOURS_API}?status=Upcoming`, {
+      console.log('🔄 Fetching tours from:', `${TOURS_API}?${queryParams.toString()}`);
+      console.log('🔐 Using token:', token ? 'Yes' : 'No');
+      console.log('📡 Making request to:', `${TOURS_API}?${queryParams.toString()}`);
+      
+      const response = await fetch(`${TOURS_API}?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -119,27 +125,187 @@ export const ToursProvider = ({ children }) => {
     }
   };
 
-  // Fetch single tour by ID
+  // Fetch single tour by ID with full details including itinerary
   const fetchTourById = async (tourId) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${TOURS_API}/${tourId}`, {
+      console.log('🔄 Fetching tour details for ID:', tourId);
+      console.log('🔐 Using token:', token ? 'Yes' : 'No');
+      
+      // For tourists, we'll try a public endpoint first if the secure one fails
+      const endpoints = [
+        `${TOURS_API}/${tourId}`,
+        `${TOURS_API}/public/${tourId}`,
+        `${API_BASE}/public/tours/${tourId}`
+      ];
+      
+      let lastError = null;
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log('🔄 Trying endpoint:', endpoint);
+          const response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            }
+          });
+
+          console.log('✅ Tour details API response status:', response.status);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('📋 Tour details data:', data);
+            
+            // Check if this is a template and user is not admin
+            if (data.isTemplate || data.is_template) {
+              throw new Error('This tour is not available for viewing');
+            }
+            
+            return { success: true, data };
+          } else {
+            if (response.status === 401) {
+              lastError = new Error('You need to be logged in to view tour details');
+            } else if (response.status === 403) {
+              lastError = new Error('This tour is not available for viewing');
+            } else if (response.status === 404) {
+              lastError = new Error('Tour not found');
+            } else {
+              lastError = new Error(`HTTP error! status: ${response.status}`);
+            }
+            console.log(`❌ Endpoint ${endpoint} failed:`, lastError.message);
+            continue; // Try next endpoint
+          }
+        } catch (endpointError) {
+          console.log(`❌ Endpoint ${endpoint} error:`, endpointError.message);
+          lastError = endpointError;
+          continue; // Try next endpoint
+        }
+      }
+      
+      // If all endpoints failed, throw the last error
+      throw lastError || new Error('All tour endpoints failed');
+      
+    } catch (err) {
+      console.error('Error fetching tour details:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add a new function to fetch tour with itinerary details specifically
+  const fetchTourWithItinerary = async (tourId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('🔄 Fetching tour with itinerary for ID:', tourId);
+      
+      // First try the basic tour endpoint which should work for tourists
+      console.log('🔄 Trying basic tour endpoint first...');
+      const basicResponse = await fetch(`${TOURS_API}/${tourId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` })
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (basicResponse.ok) {
+        const data = await basicResponse.json();
+        console.log('📋 Basic tour data:', data);
+        
+        // Check if this is a template
+        if (data.isTemplate || data.is_template) {
+          throw new Error('This tour is not available for viewing');
+        }
+        
+        // Try to get itinerary details separately
+        try {
+          console.log('🔄 Trying to get itinerary details...');
+          const itineraryResponse = await fetch(`${TOURS_API}/${tourId}/itinerary`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            }
+          });
+
+          if (itineraryResponse.ok) {
+            const itineraryData = await itineraryResponse.json();
+            console.log('📋 Itinerary data:', itineraryData);
+            
+            // Combine tour data with itinerary
+            const combinedData = {
+              ...data,
+              itineraryDays: itineraryData.itineraryDays || itineraryData || [],
+              // Also try to get additional details like activities, places, etc.
+              activities: itineraryData.activities || data.activities || [],
+              places: itineraryData.places || data.places || [],
+              meals: itineraryData.meals || data.meals || []
+            };
+            
+            return { success: true, data: combinedData };
+          } else {
+            console.log('ℹ️ Itinerary endpoint not accessible, using basic data');
+          }
+        } catch (itineraryError) {
+          console.log('ℹ️ Itinerary endpoint failed:', itineraryError.message);
+        }
+        
+        // Try alternative detailed endpoint patterns
+        const detailEndpoints = [
+          `${TOURS_API}/${tourId}/details`,
+          `${TOURS_API}/${tourId}/full`,
+          `${API_BASE}/tours/${tourId}/complete`
+        ];
+        
+        for (const endpoint of detailEndpoints) {
+          try {
+            console.log('🔄 Trying details endpoint:', endpoint);
+            const detailsResponse = await fetch(endpoint, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` })
+              }
+            });
+
+            if (detailsResponse.ok) {
+              const detailedData = await detailsResponse.json();
+              console.log('📋 Detailed tour data from', endpoint, ':', detailedData);
+              return { success: true, data: detailedData };
+            }
+          } catch (detailError) {
+            console.log(`❌ Details endpoint ${endpoint} failed:`, detailError.message);
+            continue;
+          }
+        }
+        
+        // If no detailed endpoints work, return basic data
+        return { success: true, data: data };
       }
 
-      const data = await response.json();
-      return { success: true, data };
+      // If basic endpoint also fails, handle the error
+      if (basicResponse.status === 401) {
+        throw new Error('You need to be logged in to view tour details');
+      } else if (basicResponse.status === 403) {
+        throw new Error('This tour is not available for viewing');
+      } else if (basicResponse.status === 404) {
+        throw new Error('Tour not found');
+      }
+      
+      throw new Error(`HTTP error! status: ${basicResponse.status}`);
+      
     } catch (err) {
-      console.error('Error fetching tour details:', err);
+      console.error('Error fetching tour with itinerary:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -156,6 +322,9 @@ export const ToursProvider = ({ children }) => {
       
       // Add status filter for upcoming tours
       queryParams.append('status', 'Upcoming');
+      
+      // Exclude templates from tourist view
+      queryParams.append('isTemplate', 'false');
       
       // Add other filters
       if (filters.search) queryParams.append('search', filters.search);
@@ -189,12 +358,121 @@ export const ToursProvider = ({ children }) => {
     }
   };
 
+  // New function to fetch complete tour data including all relationships
+  const fetchCompleteTourData = async (tourId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('🔄 Fetching complete tour data for ID:', tourId);
+      
+      // Try multiple approaches to get all tour data
+      const dataRequests = [];
+      
+      // 1. Basic tour data
+      dataRequests.push(
+        fetch(`${TOURS_API}/${tourId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        }).then(res => res.ok ? res.json().then(data => ({ type: 'tour', data })) : null)
+      );
+      
+      // 2. Itinerary data
+      dataRequests.push(
+        fetch(`${TOURS_API}/${tourId}/itinerary`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        }).then(res => res.ok ? res.json().then(data => ({ type: 'itinerary', data })) : null)
+      );
+      
+      // 3. Activities data
+      dataRequests.push(
+        fetch(`${TOURS_API}/${tourId}/activities`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        }).then(res => res.ok ? res.json().then(data => ({ type: 'activities', data })) : null)
+      );
+      
+      // 4. Places data
+      dataRequests.push(
+        fetch(`${TOURS_API}/${tourId}/places`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        }).then(res => res.ok ? res.json().then(data => ({ type: 'places', data })) : null)
+      );
+
+      // Execute all requests in parallel
+      const results = await Promise.allSettled(dataRequests);
+      
+      // Combine all successful results
+      let combinedData = { id: tourId };
+      
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value) {
+          const { type, data } = result.value;
+          
+          switch (type) {
+            case 'tour':
+              combinedData = { ...combinedData, ...data };
+              break;
+            case 'itinerary':
+              combinedData.itineraryDays = data.itineraryDays || data || [];
+              break;
+            case 'activities':
+              combinedData.activities = data.activities || data || [];
+              break;
+            case 'places':
+              combinedData.places = data.places || data || [];
+              break;
+          }
+        }
+      });
+      
+      // Check if we got at least basic tour data
+      if (!combinedData.title && !combinedData.name) {
+        throw new Error('Unable to fetch tour data');
+      }
+      
+      // Check if this is a template
+      if (combinedData.isTemplate || combinedData.is_template) {
+        throw new Error('This tour is not available for viewing');
+      }
+      
+      console.log('📋 Combined tour data:', combinedData);
+      return { success: true, data: combinedData };
+      
+    } catch (err) {
+      console.error('Error fetching complete tour data:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     tours,
     loading,
     error,
     fetchUpcomingTours,
     fetchTourById,
+    fetchTourWithItinerary,
+    fetchCompleteTourData,
     searchTours,
     setTours,
     setError

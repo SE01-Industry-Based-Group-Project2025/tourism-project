@@ -263,7 +263,7 @@ function ExpandableItinerary({ itinerary }) {
 }
 
 export default function TourDetailsModal({ tourId, isOpen, onClose }) {
-  const { fetchTourById, loading } = useTours();
+  const { fetchCompleteTourData, loading } = useTours();
   const { isAuthenticated, isUser, getAuthHeaders } = useAuth();
   const navigate = useNavigate();
   const [tour, setTour] = useState(null);
@@ -274,7 +274,7 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
   const [hasExistingBooking, setHasExistingBooking] = useState(false);
   const [checkingBooking, setCheckingBooking] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '';
 
   useEffect(() => {
     if (isOpen && tourId) {
@@ -293,26 +293,39 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const bookings = data.content || [];
-        const existingBooking = bookings.find(booking => 
-          booking.tourId === tourId && 
-          booking.status !== 'CANCELLED'
-        );
-        setHasExistingBooking(!!existingBooking);
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          const bookings = data.content || [];
+          const existingBooking = bookings.find(booking => 
+            booking.tourId === tourId && 
+            booking.status !== 'CANCELLED'
+          );
+          setHasExistingBooking(!!existingBooking);
+        } else {
+          console.warn('Booking check received non-JSON response');
+          setHasExistingBooking(false);
+        }
+      } else {
+        console.warn('Booking check failed with status:', response.status);
+        setHasExistingBooking(false);
       }
     } catch (error) {
       console.error('Error checking existing booking:', error);
+      setHasExistingBooking(false);
     } finally {
       setCheckingBooking(false);
     }
   };
 
   const loadTourDetails = async () => {
-    const result = await fetchTourById(tourId);
+    const result = await fetchCompleteTourData(tourId);
     if (result.success) {
       console.log('Complete tour data:', result.data); // Debug log
       console.log('Itinerary data:', result.data.itineraryDays); // Debug log
+      console.log('Activities data:', result.data.activities); // Debug log
+      console.log('Places data:', result.data.places); // Debug log
       
       // Enhanced mapping to handle different API response structures
       let itineraryData = [];
@@ -444,6 +457,28 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
       };
       
       setTour(mappedTour);
+    } else {
+      setError(result.error || 'Failed to load tour details');
+      
+      // If detailed tour fetch fails, try to get basic info from the tours list
+      // This is a fallback to show at least some information
+      console.log('Attempting fallback to show basic tour info...');
+      
+      // Create a minimal tour object to prevent complete failure
+      const fallbackTour = {
+        id: tourId,
+        title: 'Tour Details',
+        description: 'Unable to load detailed tour information. Please try again later.',
+        price: 0,
+        duration: 'Duration not specified',
+        location: 'Location not specified',
+        itinerary: [],
+        images: [],
+        activities: [],
+        places: []
+      };
+      
+      setTour(fallbackTour);
     }
   };
 
@@ -484,8 +519,8 @@ export default function TourDetailsModal({ tourId, isOpen, onClose }) {
     setError('');
 
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL;
-      const response = await fetch(`${API_BASE}/api/bookings/checkout-session`, {
+      const BOOKING_API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '';
+      const response = await fetch(`${BOOKING_API_BASE}/api/bookings/checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
